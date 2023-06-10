@@ -1,0 +1,26 @@
+name: Deploy to Shuttle.rs
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Rust stable toolchain
+        run: |
+          rustup set auto-self-update disable
+          rustup toolchain install stable --profile minimal
+
+      - name: Install Cargo Shuttle
+        uses: taiki-e/cache-cargo-install-action@1db0252b0fcafaa8184c56165d554baac689b7d9
+        with:
+          tool: cargo-shuttle
+
+      - name: Deploy code to Shuttle
+        run: |
+          cargo shuttle login --api-key ${{ secrets.SHUTTLE_API_KEY }}
+          cargo shuttle deploy --allow-dirty
