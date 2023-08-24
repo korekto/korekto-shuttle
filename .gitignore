@@ -4,3 +4,6 @@
 #IJ
 .idea/
 *.iml
+
+# Frontend
+static/

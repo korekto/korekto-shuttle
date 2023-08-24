@@ -1,12 +1,12 @@
-use axum::{Router, routing::get};
+use std::path::PathBuf;
 
-async fn hello_world() -> &'static str {
-    "Hello, world!"
-}
+mod router;
 
 #[shuttle_runtime::main]
-async fn axum() -> shuttle_axum::ShuttleAxum {
-    let router = Router::new().route("/", get(hello_world));
+async fn main(
+    #[shuttle_static_folder::StaticFolder] static_folder: PathBuf,
+) -> shuttle_axum::ShuttleAxum {
+    let router = router::router(static_folder);
 
-    Ok(router.into())
+    Ok(router)
 }
