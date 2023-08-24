@@ -7,3 +7,6 @@
 
 # Frontend
 static/
+
+# Shuttle
+Secrets*.toml

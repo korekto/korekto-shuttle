@@ -1,21 +1,26 @@
 use std::path::PathBuf;
 
+use crate::config::Config;
+use crate::router::state::AppState;
 use axum::{
     http::{StatusCode, Uri},
     routing::get,
     Extension, Router,
 };
 
+mod auth;
 mod spa;
+mod state;
 
-pub fn router(static_folder: PathBuf) -> shuttle_axum::AxumService {
-    let spa_router = get(spa::spa_handler);
+pub fn router(static_folder: PathBuf, config: &Config) -> shuttle_axum::AxumService {
+    let app_state = AppState::new(config);
 
     let router = Router::new()
-        .route("/", spa_router.clone())
-        .route("/*path", spa_router)
-        .layer(Extension(spa::spa_service(&static_folder)))
-        .fallback(fallback);
+        .route("/", get(spa::welcome_handler))
+        .route("/*path", get(spa::spa_handler))
+        .layer(Extension(spa::static_services(&static_folder)))
+        .fallback(fallback)
+        .with_state(app_state);
 
     router.into()
 }

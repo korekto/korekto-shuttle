@@ -1,0 +1,2 @@
+# Frontend must be included in the package done by Shuttle (which is using .gitignore by default)
+!static/

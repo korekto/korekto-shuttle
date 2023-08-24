@@ -10,7 +10,15 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: shuttle-hq/deploy-action@main
+      - name: Prepare static content
+        run: |
+          mkdir static
+          cp -a welcome/. static/
+          ls -al
+
+      - uses: ledoyen/deploy-action@feature/idiomatic_secret_input
         with:
           deploy-key: ${{ secrets.SHUTTLE_API_KEY }}
           allow-dirty: "true"
+          secrets: |
+            COOKIE_SECRET_KEY = '${{ secrets.APP_COOKIE_SECRET_KEY }}'
