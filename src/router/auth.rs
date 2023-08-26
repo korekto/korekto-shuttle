@@ -32,11 +32,12 @@ where
     AppState: FromRef<S>,
     S: Send + Sync,
 {
-    type Rejection = AuthRejection;
+    type Rejection = AuthenticationRejection;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let app_state = AppState::from_ref(state);
         let user = extract_user_from_cookie(parts, &app_state).await?;
+        drop(app_state);
 
         Ok(Self(user))
     }
@@ -45,7 +46,8 @@ where
 async fn extract_user_from_cookie(
     parts: &mut Parts,
     app_state: &AppState,
-) -> Result<String, AuthRejection> {
+) -> Result<String, AuthenticationRejection> {
+    #[allow(clippy::expect_used)]
     let cookies = parts
         .extract_with_state::<PrivateCookieJar, AppState>(app_state)
         .await
@@ -53,21 +55,21 @@ async fn extract_user_from_cookie(
 
     let cookie = cookies
         .get(SESSION_ID_COOKIE)
-        .ok_or(AuthRejection::AuthRedirect)?;
+        .ok_or(AuthenticationRejection::AuthRedirect)?;
 
     let username = cookie
         .value()
         .parse::<String>()
-        .map_err(|_| AuthRejection::AuthRedirect)?;
+        .map_err(|_| AuthenticationRejection::AuthRedirect)?;
 
     Ok(username)
 }
 
-pub enum AuthRejection {
+pub enum AuthenticationRejection {
     AuthRedirect,
 }
 
-impl IntoResponse for AuthRejection {
+impl IntoResponse for AuthenticationRejection {
     fn into_response(self) -> Response {
         match self {
             Self::AuthRedirect => Redirect::temporary("/").into_response(),

@@ -24,19 +24,23 @@ impl ClientCache {
         }
     }
 
-    pub fn get_for_installation(&self, installation_id: u64) -> InstallationClient {
+    pub fn get_for_installation(&self, installation_id: u64) -> anyhow::Result<InstallationClient> {
         let cloned_arc = Arc::clone(&self.inner_cache);
-        let mut inner_cache = cloned_arc.lock().unwrap();
+        let mut inner_cache = cloned_arc
+            .lock()
+            .map_err(|_| anyhow!("Previous thread using the mutex panicked"))?;
 
-        match inner_cache.get(&installation_id) {
-            Some(installation_client) => installation_client.clone(),
-            None => {
-                let gh_installation_client =
-                    InstallationClient::new(self.app_client.installation(installation_id.into()));
-                inner_cache.put(installation_id, gh_installation_client.clone());
-                gh_installation_client
-            }
-        }
+        let installation_client = inner_cache.get(&installation_id);
+
+        #[allow(clippy::option_if_let_else)]
+        Ok(if let Some(installation_client) = installation_client {
+            installation_client.clone()
+        } else {
+            let gh_installation_client =
+                InstallationClient::new(self.app_client.installation(installation_id.into()));
+            inner_cache.put(installation_id, gh_installation_client.clone());
+            gh_installation_client
+        })
     }
 
     pub async fn get_user_info(
@@ -55,6 +59,7 @@ impl ClientCache {
             .list_app_installations_accessible_to_user()
             .send()
             .await?;
+        drop(gh_user_client);
 
         let installation = user_installations_page_1
             .items

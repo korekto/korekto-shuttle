@@ -37,6 +37,7 @@ fn welcome_service(static_folder: &Path) -> ServeFile {
     ServeFile::new(static_folder.join("welcome.html"))
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub async fn spa_handler<ReqBody>(
     user: Option<AuthenticatedUser>,
     mut static_services: Extension<StaticServices>,
@@ -46,7 +47,12 @@ where
     ReqBody: 'static + Send,
 {
     if let Some(_user) = user {
-        Ok(static_services.0.spa.call(req).await.unwrap())
+        Ok(static_services
+            .0
+            .spa
+            .call(req)
+            .await
+            .map_err(|_| Redirect::temporary("/error"))?)
     } else {
         Err(Redirect::temporary("/"))
     }
@@ -63,6 +69,11 @@ where
     if let Some(_user) = user {
         Err(Redirect::temporary("/dashboard"))
     } else {
-        Ok(static_services.0.welcome.call(req).await.unwrap())
+        static_services
+            .0
+            .welcome
+            .call(req)
+            .await
+            .map_err(|_| Redirect::temporary("/error"))
     }
 }

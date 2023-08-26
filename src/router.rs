@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::config::Config;
 use crate::router::state::AppState;
@@ -12,20 +12,19 @@ mod auth;
 mod spa;
 mod state;
 
-pub fn router(static_folder: PathBuf, config: &Config) -> shuttle_axum::AxumService {
-    let app_state = AppState::new(config);
-
+pub fn router(static_folder: &Path, config: &Config) -> anyhow::Result<shuttle_axum::AxumService> {
     let router = Router::new()
         .route("/", get(spa::welcome_handler))
         .nest("/auth", auth::router())
         .route("/*path", get(spa::spa_handler))
-        .layer(Extension(spa::static_services(&static_folder)))
+        .layer(Extension(spa::static_services(static_folder)))
         .fallback(fallback)
-        .with_state(app_state);
+        .with_state(AppState::new(config)?);
 
-    router.into()
+    Ok(router.into())
 }
 
+#[allow(clippy::unused_async)]
 async fn fallback(uri: Uri) -> (StatusCode, String) {
     let message = format!("I couldn't find '{}'. Try something else?", uri.path());
     (StatusCode::NOT_FOUND, message)

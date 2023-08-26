@@ -19,6 +19,7 @@ pub struct AuthRequest {
     state: String,
 }
 
+#[allow(clippy::unused_async)]
 pub async fn gh_login_start(
     State(state): State<AppState>,
     jar: PrivateCookieJar,
@@ -94,7 +95,11 @@ fn check_state(
 
     let jar = jar.remove(Cookie::named(GH_STATE_COOKIE));
 
-    if stored_secret.is_none() || stored_secret.as_ref().unwrap().ne(state_token.secret()) {
+    if stored_secret.is_none()
+        || stored_secret
+            .as_ref()
+            .is_some_and(|ss| ss.ne(state_token.secret()))
+    {
         tracing::info!(
             "Invalid state, expected:{:?}, got:{}",
             stored_secret,
