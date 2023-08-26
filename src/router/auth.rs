@@ -1,14 +1,27 @@
-use crate::router::state::AppState;
 use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts},
     http::request::Parts,
     response::{IntoResponse, Redirect, Response},
-    RequestPartsExt,
+    routing::get,
+    RequestPartsExt, Router,
 };
+use axum_extra::extract::cookie::{Cookie, SameSite};
 use axum_extra::extract::PrivateCookieJar;
+use time::Duration;
+
+use crate::router::state::AppState;
+
+mod github;
 
 const SESSION_ID_COOKIE: &str = "session_id";
+const SESSION_ID_COOKIE_DURATION: Duration = Duration::days(1);
+
+pub fn router() -> Router<AppState> {
+    Router::new()
+        .route("/gh/start", get(github::gh_login_start))
+        .route("/gh/authorized", get(github::gh_login_authorized))
+}
 
 #[derive(Debug)]
 pub struct AuthenticatedUser(pub String);
@@ -60,4 +73,16 @@ impl IntoResponse for AuthRejection {
             Self::AuthRedirect => Redirect::temporary("/").into_response(),
         }
     }
+}
+
+fn set_session_id_cookie(jar: PrivateCookieJar, user_id: &str) -> PrivateCookieJar {
+    jar.add(session_cookie(user_id))
+}
+
+fn session_cookie<'a>(user_id: &str) -> Cookie<'a> {
+    Cookie::build(SESSION_ID_COOKIE, String::from(user_id))
+        .max_age(SESSION_ID_COOKIE_DURATION)
+        .same_site(SameSite::Lax)
+        .path("/")
+        .finish()
 }

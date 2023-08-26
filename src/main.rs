@@ -3,6 +3,7 @@ use shuttle_secrets::SecretStore;
 use std::path::PathBuf;
 
 mod config;
+mod github;
 mod router;
 
 #[shuttle_runtime::main]

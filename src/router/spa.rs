@@ -3,7 +3,6 @@ use std::path::Path;
 use axum::response::Redirect;
 use axum::{
     http::{Request, Response, StatusCode},
-    response::IntoResponse,
     Extension,
 };
 use tower_http::{
@@ -11,7 +10,6 @@ use tower_http::{
     set_status::SetStatus,
 };
 use tower_service::Service;
-use tracing::info;
 
 use crate::router::auth::AuthenticatedUser;
 
@@ -29,13 +27,10 @@ pub fn static_services(static_folder: &Path) -> StaticServices {
 }
 
 fn spa_service(static_folder: &Path) -> ServeDir<SetStatus<ServeFile>> {
-    let dashboard_path = static_folder.join("dashboard.html");
+    let index_path = static_folder.join("index.html");
 
-    let serve_dir = ServeDir::new(&static_folder).fallback(SetStatus::new(
-        ServeFile::new(&dashboard_path),
-        StatusCode::OK,
-    ));
-    serve_dir
+    ServeDir::new(static_folder)
+        .fallback(SetStatus::new(ServeFile::new(index_path), StatusCode::OK))
 }
 
 fn welcome_service(static_folder: &Path) -> ServeFile {
@@ -50,7 +45,7 @@ pub async fn spa_handler<ReqBody>(
 where
     ReqBody: 'static + Send,
 {
-    if let Some(user) = user {
+    if let Some(_user) = user {
         Ok(static_services.0.spa.call(req).await.unwrap())
     } else {
         Err(Redirect::temporary("/"))
@@ -65,7 +60,7 @@ pub async fn welcome_handler<ReqBody>(
 where
     ReqBody: 'static + Send,
 {
-    if let Some(user) = user {
+    if let Some(_user) = user {
         Err(Redirect::temporary("/dashboard"))
     } else {
         Ok(static_services.0.welcome.call(req).await.unwrap())

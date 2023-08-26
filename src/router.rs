@@ -17,6 +17,7 @@ pub fn router(static_folder: PathBuf, config: &Config) -> shuttle_axum::AxumServ
 
     let router = Router::new()
         .route("/", get(spa::welcome_handler))
+        .nest("/auth", auth::router())
         .route("/*path", get(spa::spa_handler))
         .layer(Extension(spa::static_services(&static_folder)))
         .fallback(fallback)

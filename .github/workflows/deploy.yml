@@ -10,15 +10,37 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - uses: actions/checkout@v3
+        with:
+          repository: korekto/korekto-frontend
+          ssh-key: ${{ secrets.KOREKTO_FRONTEND_DEPLOY_KEY }}
+          path: target/front_git
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: target/front_git/package-lock.json
+
+      - name: Build SPA
+        run: (cd target/front_git && npm install && npm run build)
+
       - name: Prepare static content
         run: |
           mkdir static
+          cp -a target/front_git/build/. static/
           cp -a welcome/. static/
           ls -al
 
-      - uses: ledoyen/deploy-action@feature/idiomatic_secret_input
+      - uses: shuttle-hq/deploy-action@main
         with:
           deploy-key: ${{ secrets.SHUTTLE_API_KEY }}
           allow-dirty: "true"
           secrets: |
             COOKIE_SECRET_KEY = '${{ secrets.APP_COOKIE_SECRET_KEY }}'
+            GITHUB_APP_ID = '${{ secrets.APP_GITHUB_APP_ID }}'
+            GITHUB_APP_CLIENT_ID = '${{ secrets.APP_GITHUB_APP_CLIENT_ID }}'
+            GITHUB_APP_CLIENT_SECRET = '${{ secrets.APP_GITHUB_APP_CLIENT_SECRET }}'
+            GITHUB_APP_REDIRECT_URL = 'https://korekto.shuttleapp.rs/auth/gh/authorized'
+            GITHUB_APP_PRIVATE_KEY = \"\"\"${{ secrets.APP_GITHUB_APP_PRIVATE_KEY }}\"\"\"
+            GITHUB_CLIENT_CACHE_SIZE = '50'
