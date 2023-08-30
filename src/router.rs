@@ -23,6 +23,7 @@ pub fn router(static_folder: &Path, config: &Config) -> anyhow::Result<shuttle_a
     let router = Router::new()
         .route("/", get(spa::welcome_handler))
         .nest("/auth", auth::router())
+        .nest("/fapi", fapi::router())
         .route("/*path", get(spa::spa_handler))
         .layer(Extension(spa::static_services(static_folder)))
         .layer(middleware::from_fn(debug::log_request_response))
