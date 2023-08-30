@@ -51,8 +51,8 @@ pub async fn gh_login_authorized(
 ) -> (PrivateCookieJar, Result<Redirect, StatusCode>) {
     let state_check = check_state(&query, jar);
     jar = state_check.0;
-    if let Err(status_code) = state_check.1 {
-        return (jar, Err(status_code));
+    if state_check.1.is_err() {
+        return (jar, Ok(Redirect::to("/")));
     }
 
     let token_res = state
@@ -68,11 +68,19 @@ pub async fn gh_login_authorized(
 
             match new_user_result {
                 Ok(new_user) => {
-                    jar = set_session_id_cookie(jar, &new_user.login);
-                    (jar, Ok(Redirect::to("/dashboard")))
+                    jar = set_session_id_cookie(jar, &new_user.name.unwrap_or(new_user.login));
+                    if new_user.installation_id.is_some() {
+                        (jar, Ok(Redirect::to("/dashboard")))
+                    } else {
+                        let installation_url = format!(
+                            "https://github.com/apps/{}/installations/new",
+                            &state.config.github_app_name
+                        );
+                        (jar, Ok(Redirect::to(&installation_url)))
+                    }
                 }
                 Err(error) => {
-                    tracing::info!("Error while retrieving GH user infos: {:?}", error);
+                    tracing::warn!("Error while retrieving GH user infos: {:?}", error);
                     (jar, Err(StatusCode::FORBIDDEN))
                 }
             }
@@ -84,10 +92,7 @@ pub async fn gh_login_authorized(
     }
 }
 
-fn check_state(
-    query: &AuthRequest,
-    jar: PrivateCookieJar,
-) -> (PrivateCookieJar, Result<(), StatusCode>) {
+fn check_state(query: &AuthRequest, jar: PrivateCookieJar) -> (PrivateCookieJar, Result<(), ()>) {
     let state_token = CsrfToken::new(query.state.clone());
     let stored_secret: Option<String> = jar
         .get(GH_STATE_COOKIE)
@@ -95,18 +100,22 @@ fn check_state(
 
     let jar = jar.remove(Cookie::named(GH_STATE_COOKIE));
 
-    if stored_secret.is_none()
-        || stored_secret
-            .as_ref()
-            .is_some_and(|ss| ss.ne(state_token.secret()))
+    if stored_secret
+        .as_ref()
+        .is_some_and(|ss| ss.ne(state_token.secret()))
     {
-        tracing::info!(
+        tracing::warn!(
             "Invalid state, expected:{:?}, got:{}",
             stored_secret,
             state_token.secret()
         );
-        (jar, Err(StatusCode::FORBIDDEN))
+        (jar, Err(()))
     } else {
+        if stored_secret.is_none() {
+            tracing::warn!(
+                "Missing state from cookies, not able to confirm the one sent by GitHub"
+            );
+        }
         (jar, Ok(()))
     }
 }

@@ -40,6 +40,7 @@ jobs:
             COOKIE_SECRET_KEY = '${{ secrets.APP_COOKIE_SECRET_KEY }}'
             GITHUB_APP_ID = '${{ secrets.APP_GITHUB_APP_ID }}'
             GITHUB_APP_CLIENT_ID = '${{ secrets.APP_GITHUB_APP_CLIENT_ID }}'
+            GITHUB_APP_NAME = 'korekto'
             GITHUB_APP_CLIENT_SECRET = '${{ secrets.APP_GITHUB_APP_CLIENT_SECRET }}'
             GITHUB_APP_REDIRECT_URL = 'https://korekto.shuttleapp.rs/auth/gh/authorized'
             GITHUB_APP_PRIVATE_KEY = \"\"\"${{ secrets.APP_GITHUB_APP_PRIVATE_KEY }}\"\"\"

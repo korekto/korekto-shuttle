@@ -5,13 +5,13 @@ use std::sync::{Arc, Mutex};
 use lru::LruCache;
 use oauth2::{basic::BasicTokenResponse, TokenResponse};
 
-use crate::github::client::InstallationClient;
-use crate::github::GitHubUser;
+use crate::github::client::GitHubClient;
+use crate::github::GitHubUserLogged;
 
 #[derive(Clone)]
 pub struct ClientCache {
     app_client: octocrab::Octocrab,
-    inner_cache: Arc<Mutex<LruCache<u64, InstallationClient>>>,
+    inner_cache: Arc<Mutex<LruCache<u64, GitHubClient>>>,
     app_id: u64,
 }
 
@@ -24,7 +24,7 @@ impl ClientCache {
         }
     }
 
-    pub fn get_for_installation(&self, installation_id: u64) -> anyhow::Result<InstallationClient> {
+    pub fn get_for_installation(&self, installation_id: u64) -> anyhow::Result<GitHubClient> {
         let cloned_arc = Arc::clone(&self.inner_cache);
         let mut inner_cache = cloned_arc
             .lock()
@@ -37,7 +37,7 @@ impl ClientCache {
             installation_client.clone()
         } else {
             let gh_installation_client =
-                InstallationClient::new(self.app_client.installation(installation_id.into()));
+                GitHubClient::new(self.app_client.installation(installation_id.into()));
             inner_cache.put(installation_id, gh_installation_client.clone());
             gh_installation_client
         })
@@ -46,13 +46,15 @@ impl ClientCache {
     pub async fn get_user_info(
         &self,
         token_response: &BasicTokenResponse,
-    ) -> anyhow::Result<GitHubUser> {
+    ) -> anyhow::Result<GitHubUserLogged> {
         let user_token = token_response.access_token().secret().to_string();
         let gh_user_client = octocrab::Octocrab::builder()
             .personal_token(user_token)
             .build()?;
 
-        let gh_user = gh_user_client.current().user().await?;
+        let gh_user = GitHubClient::new(gh_user_client.clone())
+            .current_user()
+            .await?;
 
         let user_installations_page_1 = gh_user_client
             .current()
@@ -61,16 +63,18 @@ impl ClientCache {
             .await?;
         drop(gh_user_client);
 
-        let installation = user_installations_page_1
+        let installation_id = user_installations_page_1
             .items
             .into_iter()
             .find(|i| i.app_id.is_some_and(|id| id.0 == self.app_id))
-            .ok_or_else(|| anyhow!("Could not find matching installation"))?;
+            .map(|i| i.id.to_string());
 
-        Ok(GitHubUser {
+        Ok(GitHubUserLogged {
             login: gh_user.login,
-            installation_id: installation.id.to_string(),
-            avatar_url: gh_user.avatar_url.to_string(),
+            name: gh_user.name,
+            installation_id,
+            avatar_url: gh_user.avatar_url,
+            email: gh_user.email,
         })
     }
 }
