@@ -11,6 +11,8 @@ shuttle-static-folder = "0.25.0"
 shuttle-secrets = "0.25.0"
 axum = {version = "0.6.20", features = ["headers"] }
 axum-extra = { version = "0.7.7", features = ["cookie-private", "cookie-key-expansion"] }
+http = "0.2.9"
+headers = "0.3.8"
 tokio = "1.28.2"
 tracing = "0.1.37"
 tower-http = { version = "0.4.0", features = ["fs"] }
@@ -24,6 +26,9 @@ octocrab = "0.29.3"
 jsonwebtoken = "8.3.0"
 hyper = "0.14.27"
 tower = "0.4.13"
+hmac = "0.12.1"
+sha2 = "0.10.7"
+serde_json = "1.0.105"
 
 [features]
 debug_http_ex = []

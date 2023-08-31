@@ -1,0 +1,6 @@
+version: "3.9"
+services:
+  smee-client:
+    image: deltaprojects/smee-client
+    container_name: smee-client
+    command: [ "-u", "https://smee.io/WPgvb1aTMNPsas", "-t", "http://host.docker.internal:8000/webhook/github" ]
