@@ -1,7 +1,6 @@
 use std::path::Path;
 use std::time::Duration;
 
-use crate::config::Config;
 use crate::router::state::AppState;
 use axum::error_handling::HandleErrorLayer;
 use axum::{
@@ -17,9 +16,9 @@ mod debug;
 mod error;
 mod fapi;
 mod spa;
-mod state;
+pub mod state;
 
-pub fn router(static_folder: &Path, config: &Config) -> anyhow::Result<shuttle_axum::AxumService> {
+pub fn router(static_folder: &Path, state: AppState) -> shuttle_axum::AxumService {
     let router = Router::new()
         .route("/", get(spa::welcome_handler))
         .nest("/auth", auth::router())
@@ -33,9 +32,9 @@ pub fn router(static_folder: &Path, config: &Config) -> anyhow::Result<shuttle_a
                 .timeout(Duration::from_secs(10)),
         )
         .fallback(fallback)
-        .with_state(AppState::new(config)?);
+        .with_state(state);
 
-    Ok(router.into())
+    router.into()
 }
 
 #[allow(clippy::unused_async)]

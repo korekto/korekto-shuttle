@@ -9,21 +9,28 @@ shuttle-runtime = "0.25.0"
 shuttle-axum = "0.25.0"
 shuttle-static-folder = "0.25.0"
 shuttle-secrets = "0.25.0"
+shuttle-aws-rds = { version = "0.25.0", features = ["postgres"] }
+
 axum = {version = "0.6.20", features = ["headers"] }
 axum-extra = { version = "0.7.7", features = ["cookie-private", "cookie-key-expansion"] }
+
 tokio = "1.28.2"
+sqlx = { version = "0.7.1", features = ["runtime-tokio-rustls", "postgres", "macros", "json", "time"] }
+
 tracing = "0.1.37"
 tower-http = { version = "0.4.0", features = ["fs"] }
 tower-service = "0.3"
+hyper = "0.14.27"
+tower = "0.4.13"
+
 anyhow = "1.0.75"
 oauth2 = "4.4.1"
-time = "0.3.27"
+time = { version = "0.3.27", features = ["serde"] }
 serde = "1.0.185"
 lru = "0.11.0"
 octocrab = "0.29.3"
 jsonwebtoken = "8.3.0"
-hyper = "0.14.27"
-tower = "0.4.13"
+
 
 [features]
 debug_http_ex = []

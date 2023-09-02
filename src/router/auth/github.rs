@@ -1,5 +1,8 @@
+use crate::entities::{GitHubUserTokens, NewUser, Token};
+use crate::github::GitHubUserLogged;
 use crate::router::auth::set_session_id_cookie;
 use crate::router::state::AppState;
+use anyhow::anyhow;
 use axum::extract::Query;
 use axum::http::StatusCode;
 use axum::{extract::State, response::Redirect};
@@ -7,8 +10,11 @@ use axum_extra::extract::{
     cookie::{Cookie, SameSite},
     PrivateCookieJar,
 };
+use oauth2::{basic::BasicTokenResponse, TokenResponse};
 use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, Scope};
-use time::Duration;
+use sqlx::types::Json;
+use time::{Duration, OffsetDateTime, PrimitiveDateTime};
+use tracing::error;
 
 const GH_STATE_COOKIE: &str = "gh_state";
 const GH_STATE_COOKIE_DURATION: Duration = Duration::minutes(10);
@@ -67,16 +73,18 @@ pub async fn gh_login_authorized(
             let new_user_result = state.github_clients.get_user_info(&token).await;
 
             match new_user_result {
-                Ok(new_user) => {
-                    jar = set_session_id_cookie(jar, &new_user.name.unwrap_or(new_user.login));
-                    if new_user.installation_id.is_some() {
-                        (jar, Ok(Redirect::to("/dashboard")))
-                    } else {
-                        let installation_url = format!(
-                            "https://github.com/apps/{}/installations/new",
-                            &state.config.github_app_name
-                        );
-                        (jar, Ok(Redirect::to(&installation_url)))
+                Ok(user_logged) => {
+                    let user_flow = decide_user_flow(&token, &user_logged, &state).await;
+                    match user_flow {
+                        Err(err) => {
+                            error!("Unexpected error: {err})");
+                            // TODO maybe some 500 page with info
+                            (jar, Ok(Redirect::to("/")))
+                        }
+                        Ok((user_id, redirect)) => {
+                            jar = set_session_id_cookie(jar, user_id);
+                            (jar, Ok(redirect))
+                        }
                     }
                 }
                 Err(error) => {
@@ -89,6 +97,34 @@ pub async fn gh_login_authorized(
             tracing::info!("Error while retrieving GH tokens: {:?}", error);
             (jar, Err(StatusCode::FORBIDDEN))
         }
+    }
+}
+
+async fn decide_user_flow(
+    token: &BasicTokenResponse,
+    user_logged: &GitHubUserLogged,
+    state: &AppState,
+) -> anyhow::Result<(i32, Redirect)> {
+    let user = state
+        .service
+        .repo
+        .upsert_user(&(token, user_logged).try_into()?)
+        .await?;
+    if user.installation_id.is_none() {
+        if let Some(installation_id) = &user_logged.installation_id {
+            state
+                .service
+                .repo
+                .update_installation_id(&user.id, installation_id)
+                .await?;
+        }
+        Ok((user.id, Redirect::to("/dashboard")))
+    } else {
+        let installation_url = format!(
+            "https://github.com/apps/{}/installations/new",
+            &state.config.github_app_name
+        );
+        Ok((user.id, Redirect::to(&installation_url)))
     }
 }
 
@@ -117,5 +153,46 @@ fn check_state(query: &AuthRequest, jar: PrivateCookieJar) -> (PrivateCookieJar,
             );
         }
         (jar, Ok(()))
+    }
+}
+
+impl TryFrom<(&BasicTokenResponse, &GitHubUserLogged)> for NewUser {
+    type Error = anyhow::Error;
+    fn try_from(
+        (token, user): (&BasicTokenResponse, &GitHubUserLogged),
+    ) -> Result<Self, Self::Error> {
+        const fn to_primitive(date_time: OffsetDateTime) -> PrimitiveDateTime {
+            PrimitiveDateTime::new(date_time.date(), date_time.time())
+        }
+
+        let access_token_expiration = OffsetDateTime::now_utc()
+            + Duration::try_from(
+                token
+                    .expires_in()
+                    .ok_or_else(|| anyhow!("Missing expiration from access token"))?,
+            )?;
+
+        let refresh_token_expiration = OffsetDateTime::now_utc() + Duration::days(30 * 4);
+
+        Ok(Self {
+            name: user.name.clone().unwrap_or_else(|| user.login.clone()),
+            provider_login: user.login.clone(),
+            email: user.email.clone().unwrap_or_default(),
+            avatar_url: user.avatar_url.clone(),
+            github_user_tokens: Some(Json(GitHubUserTokens {
+                access_token: Token {
+                    value: token.access_token().secret().to_string(),
+                    expiration_date: to_primitive(access_token_expiration),
+                },
+                refresh_token: Token {
+                    value: token
+                        .refresh_token()
+                        .ok_or_else(|| anyhow!("Missing refresh token for user {}", &user.login))?
+                        .secret()
+                        .to_string(),
+                    expiration_date: to_primitive(refresh_token_expiration),
+                },
+            })),
+        })
     }
 }

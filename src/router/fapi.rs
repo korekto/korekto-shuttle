@@ -11,10 +11,14 @@ pub fn router() -> Router<AppState> {
 
 #[allow(clippy::unused_async)]
 async fn user_self(AuthenticatedUser(user): AuthenticatedUser) -> Json<User> {
+    let mut role = if user.admin { "Admin" } else { "Student" }.to_string();
+    if user.teacher {
+        role.push_str(" & Teacher");
+    }
     Json(User {
-        name: user,
-        role: String::from("Admin, for sure"),
-        avatar_url: String::from("https://avatars.githubusercontent.com/u/6298315?v=4"),
+        name: user.name,
+        role,
+        avatar_url: user.avatar_url,
     })
 }
 

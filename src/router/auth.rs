@@ -9,7 +9,9 @@ use axum::{
 use axum_extra::extract::cookie::{Cookie, SameSite};
 use axum_extra::extract::PrivateCookieJar;
 use time::Duration;
+use tracing::warn;
 
+use crate::entities::User;
 use crate::router::state::AppState;
 
 mod github;
@@ -24,7 +26,7 @@ pub fn router() -> Router<AppState> {
 }
 
 #[derive(Debug)]
-pub struct AuthenticatedUser(pub String);
+pub struct AuthenticatedUser(pub User);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for AuthenticatedUser
@@ -39,14 +41,19 @@ where
         let user = extract_user_from_cookie(parts, &app_state).await?;
         drop(app_state);
 
-        Ok(Self(user))
+        // TODO remove this lock after beta
+        if user.provider_login.ne("ledoyen") {
+            Err(AuthenticationRejection::AuthRedirect)
+        } else {
+            Ok(Self(user))
+        }
     }
 }
 
 async fn extract_user_from_cookie(
     parts: &mut Parts,
     app_state: &AppState,
-) -> Result<String, AuthenticationRejection> {
+) -> Result<User, AuthenticationRejection> {
     #[allow(clippy::expect_used)]
     let cookies = parts
         .extract_with_state::<PrivateCookieJar, AppState>(app_state)
@@ -57,12 +64,21 @@ async fn extract_user_from_cookie(
         .get(SESSION_ID_COOKIE)
         .ok_or(AuthenticationRejection::AuthRedirect)?;
 
-    let username = cookie
+    let user_id = cookie
         .value()
-        .parse::<String>()
+        .parse::<i32>()
         .map_err(|_| AuthenticationRejection::AuthRedirect)?;
 
-    Ok(username)
+    let user = app_state
+        .service
+        .find_user_by_id(&user_id)
+        .await
+        .ok_or_else(|| {
+            warn!("User with valid cookie, but not found in Database");
+            AuthenticationRejection::AuthRedirect
+        })?;
+
+    Ok(user)
 }
 
 pub enum AuthenticationRejection {
@@ -77,12 +93,12 @@ impl IntoResponse for AuthenticationRejection {
     }
 }
 
-fn set_session_id_cookie(jar: PrivateCookieJar, user_id: &str) -> PrivateCookieJar {
+fn set_session_id_cookie(jar: PrivateCookieJar, user_id: i32) -> PrivateCookieJar {
     jar.add(session_cookie(user_id))
 }
 
-fn session_cookie<'a>(user_id: &str) -> Cookie<'a> {
-    Cookie::build(SESSION_ID_COOKIE, String::from(user_id))
+fn session_cookie<'a>(user_id: i32) -> Cookie<'a> {
+    Cookie::build(SESSION_ID_COOKIE, user_id.to_string())
         .max_age(SESSION_ID_COOKIE_DURATION)
         .same_site(SameSite::Lax)
         .path("/")

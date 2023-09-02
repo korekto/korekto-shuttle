@@ -3,7 +3,9 @@ use axum::extract::FromRef;
 use axum_extra::extract::cookie::Key;
 use oauth2::basic::BasicClient;
 use oauth2::{AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
+use sqlx::PgPool;
 
+use crate::service::Service;
 use crate::{config::Config, github, github::client_cache::ClientCache};
 
 #[allow(clippy::module_name_repetitions)]
@@ -13,6 +15,7 @@ pub struct AppState {
     pub cookie_key: Key,
     pub oauth: OAuth,
     pub github_clients: ClientCache,
+    pub service: Service,
 }
 
 impl FromRef<AppState> for Key {
@@ -22,7 +25,7 @@ impl FromRef<AppState> for Key {
 }
 
 impl AppState {
-    pub fn new(config: &Config) -> anyhow::Result<Self> {
+    pub fn new(config: &Config, pool: PgPool) -> anyhow::Result<Self> {
         let gh_app_client = github::create_gh_app_client(config)?;
 
         Ok(Self {
@@ -34,6 +37,7 @@ impl AppState {
                 config.github_client_cache_size,
                 config.github_app_id,
             ),
+            service: Service::new(pool),
         })
     }
 }
