@@ -1104,6 +1104,7 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-extra",
+ "http",
  "hyper",
  "jsonwebtoken",
  "lru",

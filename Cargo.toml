@@ -22,6 +22,7 @@ tower-http = { version = "0.4.0", features = ["fs"] }
 tower-service = "0.3"
 hyper = "0.14.27"
 tower = "0.4.13"
+http = "0.2.9"
 
 anyhow = "1.0.75"
 oauth2 = "4.4.1"

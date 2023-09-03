@@ -2,17 +2,16 @@ use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts},
     http::request::Parts,
+    RequestPartsExt,
     response::{IntoResponse, Redirect, Response},
-    routing::get,
-    RequestPartsExt, Router,
+    Router, routing::{get, post},
 };
-use axum_extra::extract::cookie::{Cookie, SameSite};
-use axum_extra::extract::PrivateCookieJar;
+use axum_extra::extract::{CookieJar, PrivateCookieJar, cookie::{Cookie, SameSite}};
+use http::{header::LOCATION, HeaderValue, StatusCode};
 use time::Duration;
 use tracing::warn;
 
-use crate::entities::User;
-use crate::router::state::AppState;
+use crate::{entities::User, router::state::AppState};
 
 mod github;
 
@@ -23,6 +22,12 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/gh/start", get(github::gh_login_start))
         .route("/gh/authorized", get(github::gh_login_authorized))
+        .route("/logout", post(logout))
+}
+
+pub async fn logout(jar: CookieJar) -> (CookieJar, Response) {
+    // Because there is no shorthand Redirect::found for now
+    (remove_session_id_cookie(jar), (StatusCode::FOUND, [(LOCATION, HeaderValue::from_static("/"))]).into_response())
 }
 
 #[derive(Debug)]
@@ -30,9 +35,9 @@ pub struct AuthenticatedUser(pub User);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for AuthenticatedUser
-where
-    AppState: FromRef<S>,
-    S: Send + Sync,
+    where
+        AppState: FromRef<S>,
+        S: Send + Sync,
 {
     type Rejection = AuthenticationRejection;
 
@@ -55,7 +60,7 @@ async fn extract_user_from_cookie(
     app_state: &AppState,
 ) -> Result<User, AuthenticationRejection> {
     #[allow(clippy::expect_used)]
-    let cookies = parts
+        let cookies = parts
         .extract_with_state::<PrivateCookieJar, AppState>(app_state)
         .await
         .expect("could not fail, waiting for into_ok() stabilization");
@@ -94,11 +99,16 @@ impl IntoResponse for AuthenticationRejection {
 }
 
 fn set_session_id_cookie(jar: PrivateCookieJar, user_id: i32) -> PrivateCookieJar {
-    jar.add(session_cookie(user_id))
+    jar.add(session_cookie(user_id.to_string()))
 }
 
-fn session_cookie<'a>(user_id: i32) -> Cookie<'a> {
-    Cookie::build(SESSION_ID_COOKIE, user_id.to_string())
+pub fn remove_session_id_cookie(jar: CookieJar) -> CookieJar {
+    // Otherwise the browser might keep the previous value if the cookie is conventionally deleted
+    jar.add(session_cookie(String::from("deleted")))
+}
+
+fn session_cookie<'a>(value: String) -> Cookie<'a> {
+    Cookie::build(SESSION_ID_COOKIE, value)
         .max_age(SESSION_ID_COOKIE_DURATION)
         .same_site(SameSite::Lax)
         .path("/")
