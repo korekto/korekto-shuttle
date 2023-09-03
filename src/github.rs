@@ -16,7 +16,6 @@ pub fn create_gh_app_client(config: &Config) -> anyhow::Result<Octocrab> {
 pub struct GitHubUserLogged {
     pub login: String,
     pub name: Option<String>,
-    pub installation_id: Option<String>,
     pub avatar_url: String,
     pub email: Option<String>,
 }

@@ -1,7 +1,3 @@
-use crate::entities::{GitHubUserTokens, NewUser, Token};
-use crate::github::GitHubUserLogged;
-use crate::router::auth::set_session_id_cookie;
-use crate::router::state::AppState;
 use anyhow::anyhow;
 use axum::extract::Query;
 use axum::http::StatusCode;
@@ -15,6 +11,11 @@ use oauth2::{reqwest::async_http_client, AuthorizationCode, CsrfToken, Scope};
 use sqlx::types::Json;
 use time::{Duration, OffsetDateTime, PrimitiveDateTime};
 use tracing::error;
+
+use crate::entities::{GitHubUserTokens, NewUser, Token};
+use crate::github::GitHubUserLogged;
+use crate::router::auth::{set_session_id_cookie, AuthenticatedUser};
+use crate::router::state::AppState;
 
 const GH_STATE_COOKIE: &str = "gh_state";
 const GH_STATE_COOKIE_DURATION: Duration = Duration::minutes(10);
@@ -100,6 +101,29 @@ pub async fn gh_login_authorized(
     }
 }
 
+pub async fn gh_post_install(
+    State(state): State<AppState>,
+    AuthenticatedUser(user): AuthenticatedUser,
+) -> Redirect {
+    let installation_id = state.github_clients.get_user_installation_id(&user).await;
+
+    if let Some(installation_id) = installation_id {
+        let result = state
+            .service
+            .repo
+            .update_installation_id(&user.id, &installation_id)
+            .await;
+        if let Err(err) = result {
+            error!(
+                "Failed to store installation_id {} for user {}: {err}",
+                &installation_id, &user.provider_login
+            );
+        }
+    }
+
+    Redirect::to("/dashboard")
+}
+
 async fn decide_user_flow(
     token: &BasicTokenResponse,
     user_logged: &GitHubUserLogged,
@@ -111,20 +135,13 @@ async fn decide_user_flow(
         .upsert_user(&(token, user_logged).try_into()?)
         .await?;
     if user.installation_id.is_none() {
-        if let Some(installation_id) = &user_logged.installation_id {
-            state
-                .service
-                .repo
-                .update_installation_id(&user.id, installation_id)
-                .await?;
-        }
-        Ok((user.id, Redirect::to("/dashboard")))
-    } else {
         let installation_url = format!(
             "https://github.com/apps/{}/installations/new",
             &state.config.github_app_name
         );
         Ok((user.id, Redirect::to(&installation_url)))
+    } else {
+        Ok((user.id, Redirect::to("/dashboard")))
     }
 }
 

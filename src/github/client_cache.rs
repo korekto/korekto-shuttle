@@ -1,12 +1,16 @@
-use anyhow::anyhow;
 use std::num::NonZeroUsize;
 use std::sync::{Arc, Mutex};
 
+use anyhow::anyhow;
 use lru::LruCache;
 use oauth2::{basic::BasicTokenResponse, TokenResponse};
+use tracing::warn;
 
-use crate::github::client::GitHubClient;
-use crate::github::GitHubUserLogged;
+use crate::entities::GitHubUserTokens;
+use crate::{
+    entities::User,
+    github::{client::GitHubClient, GitHubUserLogged},
+};
 
 #[derive(Clone)]
 pub struct ClientCache {
@@ -56,25 +60,58 @@ impl ClientCache {
             .current_user()
             .await?;
 
-        let user_installations_page_1 = gh_user_client
-            .current()
-            .list_app_installations_accessible_to_user()
-            .send()
-            .await?;
-        drop(gh_user_client);
-
-        let installation_id = user_installations_page_1
-            .items
-            .into_iter()
-            .find(|i| i.app_id.is_some_and(|id| id.0 == self.app_id))
-            .map(|i| i.id.to_string());
-
         Ok(GitHubUserLogged {
             login: gh_user.login,
             name: gh_user.name,
-            installation_id,
             avatar_url: gh_user.avatar_url,
             email: gh_user.email,
         })
+    }
+
+    pub async fn get_user_installation_id(&self, user: &User) -> Option<String> {
+        async fn get_user_installation_id_internal(
+            client_cache: &ClientCache,
+            user_tokens: &GitHubUserTokens,
+            provider_login: &str,
+        ) -> anyhow::Result<String> {
+            let gh_user_client = octocrab::Octocrab::builder()
+                .personal_token(user_tokens.access_token.value.clone())
+                .build()?;
+            let user_installations_page_1 = gh_user_client
+                .current()
+                .list_app_installations_accessible_to_user()
+                .send()
+                .await?;
+            drop(gh_user_client);
+
+            let installation_id = user_installations_page_1
+                .items
+                .into_iter()
+                .find(|i| i.app_id.is_some_and(|id| id.0 == client_cache.app_id))
+                .map(|i| i.id.to_string())
+                .ok_or_else(|| {
+                    anyhow!(
+                        "Installation of app (id: {}) not found for User {}",
+                        client_cache.app_id,
+                        provider_login
+                    )
+                })?;
+
+            Ok(installation_id)
+        }
+
+        if let Some(user_tokens) = &user.github_user_tokens {
+            let installation_id_result =
+                get_user_installation_id_internal(self, user_tokens, &user.provider_login).await;
+            match installation_id_result {
+                Ok(installation_id) => Some(installation_id),
+                Err(err) => {
+                    warn!("{err}");
+                    None
+                }
+            }
+        } else {
+            None
+        }
     }
 }

@@ -2,11 +2,14 @@ use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts},
     http::request::Parts,
-    RequestPartsExt,
     response::{IntoResponse, Redirect, Response},
-    Router, routing::{get, post},
+    routing::{get, post},
+    RequestPartsExt, Router,
 };
-use axum_extra::extract::{CookieJar, PrivateCookieJar, cookie::{Cookie, SameSite}};
+use axum_extra::extract::{
+    cookie::{Cookie, SameSite},
+    CookieJar, PrivateCookieJar,
+};
 use http::{header::LOCATION, HeaderValue, StatusCode};
 use time::Duration;
 use tracing::warn;
@@ -22,12 +25,21 @@ pub fn router() -> Router<AppState> {
     Router::new()
         .route("/gh/start", get(github::gh_login_start))
         .route("/gh/authorized", get(github::gh_login_authorized))
+        .route("/gh/post_install", get(github::gh_post_install))
         .route("/logout", post(logout))
 }
 
+#[allow(clippy::unused_async)]
 pub async fn logout(jar: CookieJar) -> (CookieJar, Response) {
     // Because there is no shorthand Redirect::found for now
-    (remove_session_id_cookie(jar), (StatusCode::FOUND, [(LOCATION, HeaderValue::from_static("/"))]).into_response())
+    (
+        remove_session_id_cookie(jar),
+        (
+            StatusCode::FOUND,
+            [(LOCATION, HeaderValue::from_static("/"))],
+        )
+            .into_response(),
+    )
 }
 
 #[derive(Debug)]
@@ -35,9 +47,9 @@ pub struct AuthenticatedUser(pub User);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for AuthenticatedUser
-    where
-        AppState: FromRef<S>,
-        S: Send + Sync,
+where
+    AppState: FromRef<S>,
+    S: Send + Sync,
 {
     type Rejection = AuthenticationRejection;
 
@@ -60,7 +72,7 @@ async fn extract_user_from_cookie(
     app_state: &AppState,
 ) -> Result<User, AuthenticationRejection> {
     #[allow(clippy::expect_used)]
-        let cookies = parts
+    let cookies = parts
         .extract_with_state::<PrivateCookieJar, AppState>(app_state)
         .await
         .expect("could not fail, waiting for into_ok() stabilization");
