@@ -4,6 +4,7 @@ use axum_extra::extract::cookie::Key;
 use oauth2::basic::BasicClient;
 use oauth2::{AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 use sqlx::PgPool;
+use uuid::Uuid;
 
 use crate::service::Service;
 use crate::{config::Config, github, github::client_cache::ClientCache};
@@ -16,6 +17,7 @@ pub struct AppState {
     pub oauth: OAuth,
     pub github_clients: ClientCache,
     pub service: Service,
+    pub instance_secret: String,
 }
 
 impl FromRef<AppState> for Key {
@@ -27,6 +29,8 @@ impl FromRef<AppState> for Key {
 impl AppState {
     pub fn new(config: &Config, pool: PgPool) -> anyhow::Result<Self> {
         let gh_app_client = github::create_gh_app_client(config)?;
+        let instance_secret = Uuid::new_v4().to_string();
+        tracing::info!("Instance secret: {}", &instance_secret);
 
         Ok(Self {
             config: config.clone(),
@@ -38,6 +42,7 @@ impl AppState {
                 config.github_app_id,
             ),
             service: Service::new(pool),
+            instance_secret,
         })
     }
 }
