@@ -79,9 +79,7 @@ where
     type Rejection = AuthenticationRejection;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let app_state = AppState::from_ref(state);
-
-        let user = extract_user_from_cookie(parts, &app_state).await?;
+        let AuthenticatedUser(user) = AuthenticatedUser::from_request_parts(parts, state).await?;
 
         if user.admin {
             Ok(Self(user))
