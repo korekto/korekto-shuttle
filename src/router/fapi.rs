@@ -4,7 +4,7 @@ use axum::{
     Json, Router,
 };
 use http::StatusCode;
-use tracing::error;
+use tracing::{error, warn};
 
 use crate::router::auth::AuthenticatedUser;
 use crate::router::state::AppState;
@@ -52,6 +52,10 @@ async fn redeem_code(
             })?;
         Ok(())
     } else {
+        warn!(
+            "Provided code was: {}, but expected: {}",
+            &payload, state.instance_secret
+        );
         Err(StatusCode::FORBIDDEN)
     }
 }
