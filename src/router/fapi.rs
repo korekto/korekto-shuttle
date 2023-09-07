@@ -9,10 +9,13 @@ use tracing::error;
 use crate::router::auth::AuthenticatedUser;
 use crate::router::state::AppState;
 
+mod admin;
+
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/user/self", get(user_self))
         .route("/settings/redeem_code", patch(redeem_code))
+        .nest("/admin", admin::router())
         .fallback(crate::router::fallback)
 }
 

@@ -45,6 +45,9 @@ pub async fn logout(jar: CookieJar) -> (CookieJar, Response) {
 #[derive(Debug)]
 pub struct AuthenticatedUser(pub User);
 
+#[derive(Debug)]
+pub struct AdminUser(pub User);
+
 #[async_trait]
 impl<S> FromRequestParts<S> for AuthenticatedUser
 where
@@ -63,6 +66,27 @@ where
             Err(AuthenticationRejection::AuthRedirect)
         } else {
             Ok(Self(user))
+        }
+    }
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for AdminUser
+where
+    AppState: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = AuthenticationRejection;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let app_state = AppState::from_ref(state);
+
+        let user = extract_user_from_cookie(parts, &app_state).await?;
+
+        if user.admin {
+            Ok(Self(user))
+        } else {
+            Err(AuthenticationRejection::NeedsAdminRight)
         }
     }
 }
@@ -100,12 +124,14 @@ async fn extract_user_from_cookie(
 
 pub enum AuthenticationRejection {
     AuthRedirect,
+    NeedsAdminRight,
 }
 
 impl IntoResponse for AuthenticationRejection {
     fn into_response(self) -> Response {
         match self {
             Self::AuthRedirect => Redirect::temporary("/").into_response(),
+            Self::NeedsAdminRight => StatusCode::FORBIDDEN.into_response(),
         }
     }
 }

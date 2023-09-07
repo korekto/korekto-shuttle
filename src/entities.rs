@@ -36,3 +36,9 @@ pub struct Token {
     pub value: String,
     pub expiration_date: PrimitiveDateTime,
 }
+
+#[derive(sqlx::FromRow, Serialize, Debug, Clone)]
+pub struct Table {
+    pub name: String,
+    pub row_count: i32,
+}
