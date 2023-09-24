@@ -25,13 +25,13 @@ async fn get_tables(
     _user: AdminUser,
     State(state): State<AppState>,
 ) -> Result<axum::Json<Vec<Table>>, StatusCode> {
-    let users = state
+    let tables = state
         .service
         .repo
         .find_tables()
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok(axum::Json(users))
+    Ok(axum::Json(tables))
 }
 
 async fn get_users(

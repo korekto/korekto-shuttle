@@ -7,6 +7,7 @@ mod find_users;
 mod migration;
 mod set_user_admin;
 mod set_users_teacher;
+mod teacher_modules;
 mod update_installation_id;
 mod upsert_user;
 

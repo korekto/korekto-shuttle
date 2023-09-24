@@ -48,6 +48,9 @@ pub struct AuthenticatedUser(pub User);
 #[derive(Debug)]
 pub struct AdminUser(pub User);
 
+#[derive(Debug)]
+pub struct TeacherUser(pub User);
+
 #[async_trait]
 impl<S> FromRequestParts<S> for AuthenticatedUser
 where
@@ -84,7 +87,26 @@ where
         if user.admin {
             Ok(Self(user))
         } else {
-            Err(AuthenticationRejection::NeedsAdminRight)
+            Err(AuthenticationRejection::NeedsAppropriateRight)
+        }
+    }
+}
+
+#[async_trait]
+impl<S> FromRequestParts<S> for TeacherUser
+where
+    AppState: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = AuthenticationRejection;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let AuthenticatedUser(user) = AuthenticatedUser::from_request_parts(parts, state).await?;
+
+        if user.teacher {
+            Ok(Self(user))
+        } else {
+            Err(AuthenticationRejection::NeedsAppropriateRight)
         }
     }
 }
@@ -122,14 +144,14 @@ async fn extract_user_from_cookie(
 
 pub enum AuthenticationRejection {
     AuthRedirect,
-    NeedsAdminRight,
+    NeedsAppropriateRight,
 }
 
 impl IntoResponse for AuthenticationRejection {
     fn into_response(self) -> Response {
         match self {
             Self::AuthRedirect => Redirect::temporary("/").into_response(),
-            Self::NeedsAdminRight => StatusCode::FORBIDDEN.into_response(),
+            Self::NeedsAppropriateRight => StatusCode::FORBIDDEN.into_response(),
         }
     }
 }
