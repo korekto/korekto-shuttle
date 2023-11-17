@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::time::Duration;
 
 use crate::router::state::AppState;
@@ -18,13 +17,13 @@ mod fapi;
 mod spa;
 pub mod state;
 
-pub fn router(static_folder: &Path, state: AppState) -> shuttle_axum::AxumService {
+pub fn router(state: AppState) -> shuttle_axum::AxumService {
     let router = Router::new()
         .route("/", get(spa::welcome_handler))
         .nest("/auth", auth::router())
         .nest("/fapi", fapi::router())
         .route("/*path", get(spa::spa_handler))
-        .layer(Extension(spa::static_services(static_folder)))
+        .layer(Extension(spa::static_services()))
         .layer(middleware::from_fn(debug::log_request_response))
         .layer(
             ServiceBuilder::new()

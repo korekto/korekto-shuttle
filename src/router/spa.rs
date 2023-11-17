@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use axum::{
     headers::IfModifiedSince,
@@ -20,10 +20,11 @@ pub struct StaticServices {
     spa: ServeDir<SetStatus<ServeFile>>,
 }
 
-pub fn static_services(static_folder: &Path) -> StaticServices {
+pub fn static_services() -> StaticServices {
+    let static_folder: PathBuf = PathBuf::from("static");
     StaticServices {
-        welcome: welcome_service(static_folder),
-        spa: spa_service(static_folder),
+        welcome: welcome_service(&static_folder),
+        spa: spa_service(&static_folder),
     }
 }
 
@@ -45,8 +46,8 @@ pub async fn spa_handler<ReqBody>(
     mut static_services: Extension<StaticServices>,
     req: Request<ReqBody>,
 ) -> Result<Result<Response<ServeFileSystemResponseBody>, StatusCode>, Redirect>
-where
-    ReqBody: 'static + Send,
+    where
+        ReqBody: 'static + Send,
 {
     if let Some(_user) = user {
         // This is a hack as for some reason, when the header If-Modified-Since is set (by the browser)
@@ -60,7 +61,8 @@ where
                 .spa
                 .call(req)
                 .await
-                .map_err(|_| Redirect::temporary("/error"))?))
+                .unwrap()
+            ))
         }
     } else {
         Err(Redirect::temporary("/"))
@@ -72,17 +74,18 @@ pub async fn welcome_handler<ReqBody>(
     mut static_services: Extension<StaticServices>,
     req: Request<ReqBody>,
 ) -> Result<Response<ServeFileSystemResponseBody>, Redirect>
-where
-    ReqBody: 'static + Send,
+    where
+        ReqBody: 'static + Send,
 {
     if let Some(_user) = user {
         Err(Redirect::temporary("/dashboard"))
     } else {
-        static_services
+        Ok(static_services
             .0
             .welcome
             .call(req)
             .await
-            .map_err(|_| Redirect::temporary("/error"))
+            .unwrap()
+        )
     }
 }

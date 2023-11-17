@@ -34,11 +34,7 @@ pub async fn logout(jar: CookieJar) -> (CookieJar, Response) {
     // Because there is no shorthand Redirect::found for now
     (
         remove_session_id_cookie(jar),
-        (
-            StatusCode::FOUND,
-            [(LOCATION, HeaderValue::from_static("/"))],
-        )
-            .into_response(),
+        (StatusCode::FOUND, [(LOCATION, HeaderValue::from_static("/"))]).into_response()
     )
 }
 

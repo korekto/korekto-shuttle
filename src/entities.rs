@@ -23,7 +23,7 @@ pub struct User {
     pub avatar_url: String,
     pub installation_id: Option<String>,
     pub github_user_tokens: Option<Json<GitHubUserTokens>>,
-    pub created_at: PrimitiveDateTime,
+    pub created_at: OffsetDateTime,
     pub admin: bool,
     pub teacher: bool,
 }

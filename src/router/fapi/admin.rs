@@ -111,7 +111,7 @@ impl TryFrom<entities::User> for User {
             teacher: user.teacher,
             admin: user.admin,
             installation_id: user.installation_id.unwrap_or_default(),
-            created_at: user.created_at.assume_utc().format(&Iso8601::DEFAULT)?,
+            created_at: user.created_at.format(&Iso8601::DEFAULT)?,
         })
     }
 }
