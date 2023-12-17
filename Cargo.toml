@@ -5,11 +5,10 @@ edition = "2021"
 publish = false
 
 [dependencies]
-shuttle-runtime = "0.33.0"
-shuttle-axum = "0.33.0"
-shuttle-static-folder = "0.28.0"
-shuttle-secrets = "0.33.0"
-shuttle-aws-rds = { version = "0.33.0", features = ["postgres"] }
+shuttle-runtime = "0.35.1"
+shuttle-axum = "0.35.1"
+shuttle-secrets = "0.35.1"
+shuttle-shared-db = { version = "0.35.1", features = ["postgres"] }
 
 axum = {version = "0.6.20", features = ["headers"] }
 axum-extra = { version = "0.8.0", features = ["cookie-private", "cookie-key-expansion"] }

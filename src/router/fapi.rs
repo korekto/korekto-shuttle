@@ -33,6 +33,7 @@ async fn user_self(AuthenticatedUser(user): AuthenticatedUser) -> Json<User> {
         avatar_url: user.avatar_url,
         installation_id: user.installation_id,
         admin: user.admin,
+        teacher: user.teacher,
     })
 }
 
@@ -69,4 +70,5 @@ struct User {
     avatar_url: String,
     installation_id: Option<String>,
     admin: bool,
+    teacher: bool,
 }

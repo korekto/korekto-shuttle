@@ -14,7 +14,7 @@ mod service;
 #[shuttle_runtime::main]
 async fn main(
     #[shuttle_secrets::Secrets] secret_store: SecretStore,
-    #[shuttle_aws_rds::Postgres] pool: PgPool,
+    #[shuttle_shared_db::Postgres] pool: PgPool,
 ) -> shuttle_axum::ShuttleAxum {
     let config = Config::try_from(secret_store)?;
     let state = AppState::new(&config, pool)?;
