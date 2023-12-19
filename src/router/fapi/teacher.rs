@@ -14,8 +14,8 @@ pub fn router() -> Router<AppState> {
         .route("/module", get(get_modules).post(create_module))
         .route(
             "/module/:module_id",
-            get(get_module),
-            //.put(update_module).delete(delete_modules)
+            get(get_module).put(update_module),
+            //.delete(delete_modules)
         )
     //.route("/module/:module_id/assignment", post(create_assignment))
     //.route("/module/:module_id/assignment/:assignment_id", get(get_assignment).put(update_assignment).delete(delete_assignments))
@@ -59,6 +59,25 @@ async fn get_module(
         .service
         .repo
         .find_module(&module_id)
+        .await
+        .map_err(|err| {
+            error!("{err:#?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(module))
+}
+
+async fn update_module(
+    _user: TeacherUser,
+    State(state): State<AppState>,
+    Path(module_id): Path<String>,
+    Json(module): Json<NewModule>,
+) -> Result<Json<Module>, StatusCode> {
+    let module = state
+        .service
+        .repo
+        .update_module(&module_id, &module)
         .await
         .map_err(|err| {
             error!("{err:#?}");

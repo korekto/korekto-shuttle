@@ -46,8 +46,8 @@ pub async fn spa_handler<ReqBody>(
     mut static_services: Extension<StaticServices>,
     req: Request<ReqBody>,
 ) -> Result<Result<Response<ServeFileSystemResponseBody>, StatusCode>, Redirect>
-    where
-        ReqBody: 'static + Send,
+where
+    ReqBody: 'static + Send,
 {
     if let Some(_user) = user {
         // This is a hack as for some reason, when the header If-Modified-Since is set (by the browser)
@@ -56,13 +56,7 @@ pub async fn spa_handler<ReqBody>(
         if if_modified_since.is_some() {
             Ok(Err(StatusCode::NOT_MODIFIED))
         } else {
-            Ok(Ok(static_services
-                .0
-                .spa
-                .call(req)
-                .await
-                .unwrap()
-            ))
+            Ok(Ok(static_services.0.spa.call(req).await.unwrap()))
         }
     } else {
         Err(Redirect::temporary("/"))
@@ -74,18 +68,12 @@ pub async fn welcome_handler<ReqBody>(
     mut static_services: Extension<StaticServices>,
     req: Request<ReqBody>,
 ) -> Result<Response<ServeFileSystemResponseBody>, Redirect>
-    where
-        ReqBody: 'static + Send,
+where
+    ReqBody: 'static + Send,
 {
     if let Some(_user) = user {
         Err(Redirect::temporary("/dashboard"))
     } else {
-        Ok(static_services
-            .0
-            .welcome
-            .call(req)
-            .await
-            .unwrap()
-        )
+        Ok(static_services.0.welcome.call(req).await.unwrap())
     }
 }
