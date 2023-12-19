@@ -1,6 +1,6 @@
 use sqlx::types::Json;
 use time::OffsetDateTime;
-use tracing::debug;
+use tracing::{debug, error};
 
 use crate::entities;
 use crate::entities::{EmbeddedAssignmentDesc, NewModule};
@@ -130,5 +130,17 @@ impl Repository {
             unlock_key: row.unlock_key,
             assignments: row.assignments.0,
         })
+    }
+
+    pub async fn delete_modules(&self, uuids: &Vec<String>) -> anyhow::Result<u64> {
+        const QUERY: &str = "DELETE FROM \"module\" WHERE uuid::varchar = ANY($1)";
+
+        match sqlx::query(QUERY).bind(uuids).execute(&self.pool).await {
+            Err(err) => {
+                error!("delete_modules({:?}): {:?}", uuids, &err);
+                Err(err.into())
+            }
+            Ok(query_result) => Ok(query_result.rows_affected()),
+        }
     }
 }

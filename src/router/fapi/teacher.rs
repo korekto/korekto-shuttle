@@ -11,12 +11,11 @@ use crate::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/module", get(get_modules).post(create_module))
         .route(
-            "/module/:module_id",
-            get(get_module).put(update_module),
-            //.delete(delete_modules)
+            "/module",
+            get(get_modules).post(create_module).delete(delete_modules),
         )
+        .route("/module/:module_id", get(get_module).put(update_module))
     //.route("/module/:module_id/assignment", post(create_assignment))
     //.route("/module/:module_id/assignment/:assignment_id", get(get_assignment).put(update_assignment).delete(delete_assignments))
 }
@@ -85,4 +84,22 @@ async fn update_module(
         })?;
 
     Ok(Json(module))
+}
+
+async fn delete_modules(
+    _user: TeacherUser,
+    State(state): State<AppState>,
+    Json(module_ids): Json<Vec<String>>,
+) -> Result<(), StatusCode> {
+    state
+        .service
+        .repo
+        .delete_modules(&module_ids)
+        .await
+        .map_err(|err| {
+            error!("{err:#?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(())
 }
