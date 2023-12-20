@@ -1,11 +1,14 @@
 use axum::extract::Path;
-use axum::{extract::State, routing::get, Json, Router};
+use axum::{
+    extract::State,
+    routing::{get, post},
+    Json, Router,
+};
 use http::StatusCode;
-use tracing::error;
+use tracing::{error, info};
 
-use crate::entities::{Module, NewModule};
 use crate::{
-    entities::ModuleDesc,
+    entities::{Assignment, Module, ModuleDesc, NewAssignment, NewModule},
     router::{auth::TeacherUser, state::AppState},
 };
 
@@ -16,7 +19,7 @@ pub fn router() -> Router<AppState> {
             get(get_modules).post(create_module).delete(delete_modules),
         )
         .route("/module/:module_id", get(get_module).put(update_module))
-    //.route("/module/:module_id/assignment", post(create_assignment))
+        .route("/module/:module_id/assignment", post(create_assignment))
     //.route("/module/:module_id/assignment/:assignment_id", get(get_assignment).put(update_assignment).delete(delete_assignments))
 }
 
@@ -25,7 +28,8 @@ async fn get_modules(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<ModuleDesc>>, StatusCode> {
     let modules = state.service.repo.find_modules().await.map_err(|err| {
-        error!("{err:#?}");
+        info!("toto");
+        error!("get_modules {err:#?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
     Ok(Json(modules))
@@ -42,7 +46,7 @@ async fn create_module(
         .create_module(&module)
         .await
         .map_err(|err| {
-            error!("{err:#?}");
+            error!("create_module {err:#?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -60,7 +64,7 @@ async fn get_module(
         .find_module(&module_id)
         .await
         .map_err(|err| {
-            error!("{err:#?}");
+            error!("get_module {err:#?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -79,7 +83,7 @@ async fn update_module(
         .update_module(&module_id, &module)
         .await
         .map_err(|err| {
-            error!("{err:#?}");
+            error!("update_module {err:#?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -97,9 +101,28 @@ async fn delete_modules(
         .delete_modules(&module_ids)
         .await
         .map_err(|err| {
-            error!("{err:#?}");
+            error!("delete_modules {err:#?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
     Ok(())
+}
+
+async fn create_assignment(
+    _user: TeacherUser,
+    State(state): State<AppState>,
+    Path(module_id): Path<String>,
+    Json(assignment): Json<NewAssignment>,
+) -> Result<Json<Assignment>, StatusCode> {
+    let assignment = state
+        .service
+        .repo
+        .create_assignment(&module_id, &assignment)
+        .await
+        .map_err(|err| {
+            error!("create_assignment {err:#?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(assignment))
 }

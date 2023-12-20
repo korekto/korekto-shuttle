@@ -83,10 +83,46 @@ pub struct Module {
 pub struct EmbeddedAssignmentDesc {
     pub id: String,
     pub name: String,
+    #[serde(rename = "type")]
     pub a_type: String,
     #[serde(with = "time_serde")]
     pub start: OffsetDateTime,
     #[serde(with = "time_serde")]
     pub stop: OffsetDateTime,
     pub factor_percentage: i32,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct NewAssignment {
+    pub name: String,
+    #[serde(with = "time_serde")]
+    pub start: OffsetDateTime,
+    #[serde(with = "time_serde")]
+    pub stop: OffsetDateTime,
+    pub description: String,
+    #[serde(rename = "type")]
+    pub a_type: String,
+    pub subject_url: String,
+    pub grader_url: String,
+    pub repository_name: String,
+    pub factor_percentage: i32,
+    pub grader_run_url: String,
+}
+
+#[derive(sqlx::FromRow, Serialize, Debug, Clone)]
+pub struct Assignment {
+    pub id: String,
+    pub name: String,
+    #[serde(with = "time_serde")]
+    pub start: OffsetDateTime,
+    #[serde(with = "time_serde")]
+    pub stop: OffsetDateTime,
+    pub description: String,
+    #[serde(rename = "type")]
+    pub a_type: String,
+    pub subject_url: String,
+    pub grader_url: String,
+    pub repository_name: String,
+    pub factor_percentage: i32,
+    pub grader_run_url: String,
 }

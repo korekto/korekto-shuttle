@@ -38,8 +38,13 @@ CREATE TABLE IF NOT EXISTS "assignment" (
   name VARCHAR NOT NULL,
   start TIMESTAMPTZ NOT NULL,
   stop TIMESTAMPTZ NOT NULL,
+  description VARCHAR NOT NULL,
   type VARCHAR NOT NULL,
   factor_percentage INTEGER NOT NULL,
+  subject_url VARCHAR NOT NULL,
+  grader_url VARCHAR NOT NULL,
+  repository_name VARCHAR NOT NULL,
+  grader_run_url VARCHAR NOT NULL,
   CONSTRAINT fk_assignment_module_id
         FOREIGN KEY(module_id)
         REFERENCES module(id)
