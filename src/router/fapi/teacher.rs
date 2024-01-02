@@ -20,7 +20,10 @@ pub fn router() -> Router<AppState> {
         )
         .route("/module/:module_id", get(get_module).put(update_module))
         .route("/module/:module_id/assignment", post(create_assignment))
-    //.route("/module/:module_id/assignment/:assignment_id", get(get_assignment).put(update_assignment).delete(delete_assignments))
+        .route(
+            "/module/:module_id/assignment/:assignment_id",
+            get(get_assignment).put(update_assignment), //.delete(delete_assignments)
+        )
 }
 
 async fn get_modules(
@@ -121,6 +124,43 @@ async fn create_assignment(
         .await
         .map_err(|err| {
             error!("create_assignment {err:#?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(assignment))
+}
+
+async fn get_assignment(
+    _user: TeacherUser,
+    State(state): State<AppState>,
+    Path((module_id, assignment_id)): Path<(String, String)>,
+) -> Result<Json<Assignment>, StatusCode> {
+    let assignment = state
+        .service
+        .repo
+        .find_assignment(&module_id, &assignment_id)
+        .await
+        .map_err(|err| {
+            error!("get_assignment {err:#?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(assignment))
+}
+
+async fn update_assignment(
+    _user: TeacherUser,
+    State(state): State<AppState>,
+    Path((module_id, assignment_id)): Path<(String, String)>,
+    Json(assignment): Json<NewAssignment>,
+) -> Result<Json<Assignment>, StatusCode> {
+    let assignment = state
+        .service
+        .repo
+        .update_assignment(&module_id, &assignment_id, &assignment)
+        .await
+        .map_err(|err| {
+            error!("update_assignment {err:#?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 

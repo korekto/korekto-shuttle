@@ -51,18 +51,24 @@ impl Repository {
     }
 
     pub async fn find_module(&self, uuid: &str) -> anyhow::Result<entities::Module> {
-        const QUERY: &str = "SELECT
-            m.uuid::varchar as \"id\",
-            m.name,
-            m.start,
-            m.stop,
-            m.unlock_key,
-            a.assignments
+        const QUERY: &str = "
+            WITH ORDERED_ASSIGNMENTS AS (
+                SELECT *
+                FROM ASSIGNMENT
+                ORDER BY id asc
+            )
+            SELECT
+                m.uuid::varchar as \"id\",
+                m.name,
+                m.start,
+                m.stop,
+                m.unlock_key,
+                a.assignments
             FROM \"module\" m
             LEFT JOIN LATERAL (
                 SELECT
                     coalesce(jsonb_agg(to_jsonb(a.*) || jsonb_build_object('a_type', a.type, 'id', a.uuid)), '[]'::jsonb) AS assignments
-                FROM ASSIGNMENT A
+                FROM ORDERED_ASSIGNMENTS A
                 WHERE m.id = A.module_id
             ) AS a ON TRUE
             WHERE m.uuid::varchar = $1";
@@ -89,26 +95,32 @@ impl Repository {
         uuid: &str,
         module: &NewModule,
     ) -> anyhow::Result<entities::Module> {
-        const QUERY: &str = "UPDATE \"module\" AS m SET
-            name = $2,
-            start = $3,
-            stop = $4,
-            unlock_key = $5
+        const QUERY: &str = "\
+            WITH ORDERED_ASSIGNMENTS AS (
+                SELECT *
+                FROM ASSIGNMENT
+                ORDER BY id asc
+            )
+            UPDATE \"module\" AS m SET
+                name = $2,
+                start = $3,
+                stop = $4,
+                unlock_key = $5
             FROM \"module\" AS m2
             LEFT JOIN LATERAL (
                 SELECT
                     coalesce(jsonb_agg(to_jsonb(a.*) || jsonb_build_object('a_type', a.type, 'id', a.uuid)), '[]'::jsonb) AS assignments
-                FROM ASSIGNMENT A
+                FROM ORDERED_ASSIGNMENTS A
                 WHERE m2.id = A.module_id
             ) AS a ON TRUE
             WHERE m.uuid::varchar = $1
                 AND m2.uuid::varchar = $1
             RETURNING m.uuid::varchar as \"id\",
-            m.name,
-            m.start,
-            m.stop,
-            m.unlock_key,
-            a.assignments
+                m.name,
+                m.start,
+                m.stop,
+                m.unlock_key,
+                a.assignments
         ";
 
         debug!("Updating module: {uuid}");

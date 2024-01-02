@@ -1,4 +1,5 @@
 use crate::entities::{Assignment, NewAssignment};
+use tracing::debug;
 
 use super::Repository;
 
@@ -17,6 +18,80 @@ impl Repository {
 
         Ok(sqlx::query_as::<_, Assignment>(QUERY)
             .bind(module_uuid)
+            .bind(&assignment.name)
+            .bind(assignment.start)
+            .bind(assignment.stop)
+            .bind(&assignment.description)
+            .bind(&assignment.a_type)
+            .bind(&assignment.subject_url)
+            .bind(&assignment.grader_url)
+            .bind(&assignment.repository_name)
+            .bind(assignment.factor_percentage)
+            .bind(&assignment.grader_run_url)
+            .fetch_one(&self.pool)
+            .await?)
+    }
+
+    pub async fn find_assignment(
+        &self,
+        module_uuid: &str,
+        uuid: &str,
+    ) -> anyhow::Result<Assignment> {
+        const QUERY: &str = "SELECT
+            a.uuid::varchar as \"id\",
+            a.name,
+            a.start,
+            a.stop,
+            a.description,
+            a.type as \"a_type\",
+            a.subject_url,
+            a.grader_url,
+            a.repository_name,
+            a.factor_percentage,
+            a.grader_run_url
+            FROM \"assignment\" a
+            JOIN \"module\" m ON m.id = a.module_id
+            WHERE a.uuid::varchar = $2
+                  AND m.uuid::varchar = $1";
+
+        debug!("Loading assignment: {uuid} (module {module_uuid})");
+
+        Ok(sqlx::query_as::<_, Assignment>(QUERY)
+            .bind(module_uuid)
+            .bind(uuid)
+            .fetch_one(&self.pool)
+            .await?)
+    }
+
+    pub async fn update_assignment(
+        &self,
+        module_uuid: &str,
+        uuid: &str,
+        assignment: &NewAssignment,
+    ) -> anyhow::Result<Assignment> {
+        const QUERY: &str = "UPDATE \"assignment\" AS a SET
+            name = $3,
+            start = $4,
+            stop = $5,
+            description = $6,
+            type = $7,
+            subject_url = $8,
+            grader_url = $9,
+            repository_name = $10,
+            factor_percentage = $11,
+            grader_run_url = $12
+            FROM \"module\" AS m
+            WHERE m.id = a.module_id
+                AND m.uuid::varchar = $1
+                AND a.uuid::varchar = $2
+            RETURNING a.*, a.type as \"a_type\", a.uuid::varchar as \"id\"
+        ";
+
+        debug!("Updating assignment: {uuid} (module {module_uuid})");
+
+        Ok(sqlx::query_as::<_, Assignment>(QUERY)
+            .bind(module_uuid)
+            .bind(uuid)
             .bind(&assignment.name)
             .bind(assignment.start)
             .bind(assignment.stop)
