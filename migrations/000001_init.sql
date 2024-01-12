@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS "user" (
   teacher BOOLEAN DEFAULT FALSE NOT NULL
 );
 
--- DROP TABLE IF EXISTS "module" CASCADE;
+DROP TABLE IF EXISTS "module" CASCADE;
 
 CREATE TABLE IF NOT EXISTS "module" (
   id SERIAL PRIMARY KEY,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS "module" (
   unlock_key VARCHAR NOT NULL
 );
 
--- DROP TABLE IF EXISTS "assignment";
+DROP TABLE IF EXISTS "assignment";
 
 CREATE TABLE IF NOT EXISTS "assignment" (
   id SERIAL PRIMARY KEY,
@@ -49,4 +49,11 @@ CREATE TABLE IF NOT EXISTS "assignment" (
         FOREIGN KEY(module_id)
         REFERENCES module(id)
         ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "user_module" (
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  user_id integer,
+  module_id integer,
+  UNIQUE (user_id, module_id)
 );

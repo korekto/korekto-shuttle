@@ -19,10 +19,13 @@ pub fn router() -> Router<AppState> {
             get(get_modules).post(create_module).delete(delete_modules),
         )
         .route("/module/:module_id", get(get_module).put(update_module))
-        .route("/module/:module_id/assignment", post(create_assignment))
+        .route(
+            "/module/:module_id/assignment",
+            post(create_assignment).delete(delete_assignments),
+        )
         .route(
             "/module/:module_id/assignment/:assignment_id",
-            get(get_assignment).put(update_assignment), //.delete(delete_assignments)
+            get(get_assignment).put(update_assignment),
         )
 }
 
@@ -165,4 +168,23 @@ async fn update_assignment(
         })?;
 
     Ok(Json(assignment))
+}
+
+async fn delete_assignments(
+    _user: TeacherUser,
+    State(state): State<AppState>,
+    Path(module_id): Path<String>,
+    Json(assignment_ids): Json<Vec<String>>,
+) -> Result<(), StatusCode> {
+    state
+        .service
+        .repo
+        .delete_assignments(&module_id, &assignment_ids)
+        .await
+        .map_err(|err| {
+            error!("delete_assignments {err:#?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::entities::{Assignment, NewAssignment};
-use tracing::debug;
+use tracing::{debug, error};
 
 use super::Repository;
 
@@ -104,5 +104,31 @@ impl Repository {
             .bind(&assignment.grader_run_url)
             .fetch_one(&self.pool)
             .await?)
+    }
+
+    pub async fn delete_assignments(
+        &self,
+        module_uuid: &str,
+        uuids: &Vec<String>,
+    ) -> anyhow::Result<u64> {
+        const QUERY: &str = "DELETE FROM \"assignment\" a
+            USING \"module\" m
+            WHERE m.id = a.module_id
+            AND m.uuid::varchar = $1
+            AND a.uuid::varchar = ANY($2)
+        ";
+
+        match sqlx::query(QUERY)
+            .bind(module_uuid)
+            .bind(uuids)
+            .execute(&self.pool)
+            .await
+        {
+            Err(err) => {
+                error!("delete_assignments({:?}): {:?}", uuids, &err);
+                Err(err.into())
+            }
+            Ok(query_result) => Ok(query_result.rows_affected()),
+        }
     }
 }
