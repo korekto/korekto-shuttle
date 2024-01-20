@@ -9,12 +9,13 @@ impl Repository {
         module_uuid: &str,
         assignment: &NewAssignment,
     ) -> anyhow::Result<Assignment> {
-        const QUERY: &str = "INSERT INTO \"assignment\" \
-            (module_id, name, start, stop, description, type, subject_url, grader_url, repository_name, factor_percentage, grader_run_url) \
-            SELECT m.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11 \
-            FROM \"module\" m \
-            WHERE m.uuid::varchar = $1 \
-            RETURNING *, type as \"a_type\"";
+        const QUERY: &str = "INSERT INTO \"assignment\"
+            (module_id, name, start, stop, description, type, subject_url, grader_url, repository_name, factor_percentage, grader_run_url)
+            SELECT m.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+            FROM \"module\" m
+            WHERE m.uuid::varchar = $1
+            RETURNING *, type as \"a_type\", uuid::varchar as \"id\"
+            ";
 
         Ok(sqlx::query_as::<_, Assignment>(QUERY)
             .bind(module_uuid)
