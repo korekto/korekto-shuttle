@@ -192,9 +192,9 @@ impl TryFrom<(&BasicTokenResponse, &GitHubUserLogged)> for NewUser {
         let refresh_token_expiration = OffsetDateTime::now_utc() + Duration::days(30 * 4);
 
         Ok(Self {
-            name: user.name.clone().unwrap_or_else(|| user.login.clone()),
+            provider_name: user.name.clone().unwrap_or_else(|| user.login.clone()),
             provider_login: user.login.clone(),
-            email: user.email.clone().unwrap_or_default(),
+            provider_email: user.email.clone().unwrap_or_default(),
             avatar_url: user.avatar_url.clone(),
             github_user_tokens: Some(Json(GitHubUserTokens {
                 access_token: Token {

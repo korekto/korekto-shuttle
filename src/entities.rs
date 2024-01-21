@@ -6,10 +6,10 @@ use time::serde::rfc3339 as time_serde;
 
 #[derive(Debug)]
 pub struct NewUser {
-    pub name: String,
-    pub provider_login: String,
+    pub provider_name: String,
     // This is the discriminant for upsert
-    pub email: String,
+    pub provider_login: String,
+    pub provider_email: String,
     pub avatar_url: String,
     pub github_user_tokens: Option<Json<GitHubUserTokens>>,
 }
@@ -17,15 +17,18 @@ pub struct NewUser {
 #[derive(sqlx::FromRow, Debug, Clone)]
 pub struct User {
     pub id: i32,
-    pub name: String,
+    pub provider_name: String,
     pub provider_login: String,
-    pub email: String,
+    pub provider_email: String,
     pub avatar_url: String,
     pub installation_id: Option<String>,
     pub github_user_tokens: Option<Json<GitHubUserTokens>>,
     pub created_at: OffsetDateTime,
     pub admin: bool,
     pub teacher: bool,
+    pub first_name: String,
+    pub last_name: String,
+    pub school_group: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

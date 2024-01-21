@@ -105,8 +105,8 @@ impl TryFrom<entities::User> for User {
         Ok(Self {
             id: user.id,
             provider_login: user.provider_login,
-            name: user.name,
-            email: user.email,
+            name: user.provider_name,
+            email: user.provider_email,
             accessible_repos: 0,
             teacher: user.teacher,
             admin: user.admin,

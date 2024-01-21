@@ -28,7 +28,7 @@ async fn user_self(AuthenticatedUser(user): AuthenticatedUser) -> Json<User> {
         role.push_str(" & Teacher");
     }
     Json(User {
-        name: user.name,
+        name: user.provider_name,
         role,
         avatar_url: user.avatar_url,
         installation_id: user.installation_id,
