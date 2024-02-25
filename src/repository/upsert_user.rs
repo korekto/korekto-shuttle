@@ -10,7 +10,7 @@ impl Repository {
         (provider_name, provider_login, provider_email, school_email, avatar_url, github_user_tokens, first_name, last_name, school_group)
         VALUES ($1, $2, $3, $3, $4, $5, $6, $7, '')
         ON CONFLICT (provider_login) DO UPDATE
-        SET (provider_name, provider_login, avatar_url, github_user_tokens)
+        SET (provider_name, provider_email, avatar_url, github_user_tokens)
         = ($1, $3, $4, $5)
         RETURNING *";
 
