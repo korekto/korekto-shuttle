@@ -11,6 +11,10 @@ inputs:
   skip-just-setup:
     description: Set to true to skip just setup
     default: 'false'
+  setup-nextest:
+    description: Set to true to setup nextest
+    default: 'false'
+
 
 runs:
   using: "composite"
@@ -21,5 +25,12 @@ runs:
         rustup toolchain install ${{ inputs.toolchain }} --profile minimal --component ${{ inputs.components }}
         rustup override set ${{ inputs.toolchain }}
 
-    - uses: extractions/setup-just@v2
+    - uses: taiki-e/install-action@v2
       if: ${{ inputs.skip-just-setup != 'true' }}
+      with:
+        tool: just
+
+    - uses: taiki-e/install-action@v2
+      if: ${{ inputs.setup-nextest == 'true' }}
+      with:
+        tool: nextest

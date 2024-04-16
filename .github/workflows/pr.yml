@@ -24,8 +24,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-rustfmt
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo
 
       - uses: ./.github/actions/setup-rust
 
@@ -46,8 +48,10 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-clippy
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo
 
       - uses: ./.github/actions/setup-rust
 
@@ -69,17 +73,53 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-test
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo
 
       - uses: ./.github/actions/setup-rust
-
-      - uses: taiki-e/install-action@v2
         with:
-          tool: nextest
+          setup-nextest: true
 
       - name: Build
         run: just build
 
       - name: UnitTest
         run: just test
+
+  integration-tests:
+    name: Run integration tests
+    needs: [ test ]
+    runs-on: ubuntu-latest
+    services:
+      it-postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: mysecretpassword
+          POSTGRES_DB: postgres
+        ports:
+          - 5433:5432
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-integration-tests
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+            ${{ runner.os }}-cargo
+
+      - uses: ./.github/actions/setup-rust
+        with:
+          setup-nextest: true
+
+      - name: Run integration tests
+        run: just integration-test-with-available-pg
