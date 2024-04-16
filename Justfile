@@ -24,3 +24,6 @@ test:
 
 run:
    cargo shuttle run
+
+shuttle-restart:
+  cargo shuttle project restart --idle-minutes 0
