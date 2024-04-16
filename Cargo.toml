@@ -35,6 +35,4 @@ uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 
 [dev-dependencies]
 pretty_assertions = "1.4.0"
-
-[features]
-debug_http_ex = []
+assert_matches2 = "0.1.2"

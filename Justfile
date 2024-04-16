@@ -1,4 +1,6 @@
-default:
+#!/usr/bin/env -S just --justfile
+
+_default:
   @just --list --unsorted --justfile '{{justfile()}}'
 
 fmt:
@@ -21,7 +23,19 @@ build:
   cargo build
 
 test:
-  cargo nextest run --hide-progress-bar --success-output immediate --failure-output immediate
+  cargo nextest run --lib --bins --hide-progress-bar --success-output immediate --failure-output immediate
+
+integration-test:
+  @export TIMEFORMAT='%3lR' && time just _integration-test-raw
+
+_integration-test-raw:
+  #!/usr/bin/env bash
+  docker run --name it-postgres -p 5433:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_DB=postgres -d postgres:14-alpine
+  trap 'docker rm $(docker stop it-postgres)' EXIT
+  just integration-test-with-available-pg
+
+integration-test-with-available-pg:
+  cargo nextest run --test '*' --hide-progress-bar --success-output immediate --failure-output immediate
 
 run:
    cargo shuttle run
