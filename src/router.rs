@@ -4,14 +4,13 @@ use crate::router::state::AppState;
 use axum::error_handling::HandleErrorLayer;
 use axum::{
     http::{StatusCode, Uri},
-    middleware,
     routing::get,
     Extension, Router,
 };
 use tower::ServiceBuilder;
+use tower_http::trace::TraceLayer;
 
 mod auth;
-mod debug;
 mod error;
 mod fapi;
 mod spa;
@@ -24,9 +23,9 @@ pub fn router(state: AppState) -> shuttle_axum::AxumService {
         .nest("/fapi", fapi::router())
         .route("/*path", get(spa::spa_handler))
         .layer(Extension(spa::static_services()))
-        .layer(middleware::from_fn(debug::log_request_response))
         .layer(
             ServiceBuilder::new()
+                .layer(TraceLayer::new_for_http())
                 .layer(HandleErrorLayer::new(error::handle))
                 .timeout(Duration::from_secs(10)),
         )
