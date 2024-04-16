@@ -1,6 +1,6 @@
 use crate::config::Config;
 use crate::router::state::AppState;
-use shuttle_secrets::SecretStore;
+use shuttle_runtime::SecretStore;
 use sqlx::PgPool;
 
 mod config;
@@ -13,7 +13,7 @@ mod service;
 #[allow(clippy::unused_async)]
 #[shuttle_runtime::main]
 async fn main(
-    #[shuttle_secrets::Secrets] secret_store: SecretStore,
+    #[shuttle_runtime::Secrets] secret_store: SecretStore,
     #[shuttle_shared_db::Postgres] pool: PgPool,
 ) -> shuttle_axum::ShuttleAxum {
     let config = Config::try_from(secret_store)?;

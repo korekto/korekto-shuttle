@@ -1,11 +1,12 @@
 use std::path::{Path, PathBuf};
 
 use axum::{
-    headers::IfModifiedSince,
     http::{Request, Response, StatusCode},
     response::Redirect,
-    Extension, TypedHeader,
+    Extension,
 };
+use axum_extra::TypedHeader;
+use headers::IfModifiedSince;
 use tower_http::{
     services::{fs::ServeFileSystemResponseBody, ServeDir, ServeFile},
     set_status::SetStatus,

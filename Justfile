@@ -2,6 +2,9 @@ default:
   @just --list --unsorted --justfile '{{justfile()}}'
 
 fmt:
+  cargo fmt --all
+
+fmt-check:
   cargo fmt --all --check
 
 clippy:
@@ -18,3 +21,6 @@ build:
 
 test:
   cargo nextest run --hide-progress-bar --success-output immediate --failure-output immediate
+
+run:
+   cargo shuttle run

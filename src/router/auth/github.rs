@@ -42,10 +42,9 @@ pub async fn gh_login_start(
 
     (
         jar.add(
-            Cookie::build(GH_STATE_COOKIE, csrf_state.secret().clone())
+            Cookie::build((GH_STATE_COOKIE, csrf_state.secret().clone()))
                 .max_age(GH_STATE_COOKIE_DURATION)
-                .same_site(SameSite::Lax)
-                .finish(),
+                .same_site(SameSite::Lax),
         ),
         Redirect::to(authorize_url.as_ref()),
     )
@@ -151,7 +150,7 @@ fn check_state(query: &AuthRequest, jar: PrivateCookieJar) -> (PrivateCookieJar,
         .get(GH_STATE_COOKIE)
         .map(|cookie| cookie.value().to_owned());
 
-    let jar = jar.remove(Cookie::named(GH_STATE_COOKIE));
+    let jar = jar.remove(Cookie::from(GH_STATE_COOKIE));
 
     if stored_secret
         .as_ref()

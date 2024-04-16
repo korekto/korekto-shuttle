@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use shuttle_secrets::SecretStore;
+use shuttle_runtime::SecretStore;
 use std::num::NonZeroUsize;
 
 #[derive(Clone)]

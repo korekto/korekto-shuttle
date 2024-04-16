@@ -159,9 +159,9 @@ pub fn remove_session_id_cookie(jar: CookieJar) -> CookieJar {
 }
 
 fn session_cookie<'a>(value: String) -> Cookie<'a> {
-    Cookie::build(SESSION_ID_COOKIE, value)
+    Cookie::build((SESSION_ID_COOKIE, value))
         .max_age(SESSION_ID_COOKIE_DURATION)
         .same_site(SameSite::Lax)
         .path("/")
-        .finish()
+        .build()
 }
