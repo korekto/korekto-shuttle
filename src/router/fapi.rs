@@ -28,7 +28,10 @@ async fn user_self(AuthenticatedUser(user): AuthenticatedUser) -> Json<User> {
         role.push_str(" & Teacher");
     }
     Json(User {
-        name: user.provider_name,
+        firstname: user.first_name,
+        lastname: user.last_name,
+        school_group: user.school_group,
+        school_email: user.school_email,
         role,
         avatar_url: user.avatar_url,
         installation_id: user.installation_id,
@@ -65,7 +68,10 @@ async fn redeem_code(
 
 #[derive(Debug, serde::Serialize)]
 struct User {
-    name: String,
+    firstname: String,
+    lastname: String,
+    school_group: String,
+    school_email: String,
     role: String,
     avatar_url: String,
     installation_id: Option<String>,
