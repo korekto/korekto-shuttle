@@ -1,14 +1,6 @@
-use crate::config::Config;
-use crate::router::state::AppState;
+use korekto::{config::Config, router, router::state::AppState};
 use shuttle_runtime::SecretStore;
 use sqlx::PgPool;
-
-mod config;
-mod entities;
-mod github;
-mod repository;
-mod router;
-mod service;
 
 #[allow(clippy::unused_async)]
 #[shuttle_runtime::main]

@@ -14,7 +14,8 @@ clippy:
     -W clippy::unwrap_used \
     -W clippy::expect_used \
     -A clippy::significant_drop_tightening \
-    -A clippy::no_effect_underscore_binding
+    -A clippy::no_effect_underscore_binding \
+    -A clippy::missing_errors_doc
 
 build:
   cargo build
