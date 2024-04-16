@@ -11,5 +11,5 @@ indent_style = space
 [*.rs]
 indent_size = 4
 
-[*.yml]
+[*.yml, Justfile]
 indent_size = 2
