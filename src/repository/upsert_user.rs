@@ -61,6 +61,7 @@ impl<'a> Names<'a> {
 #[cfg(test)]
 mod tests {
     use crate::repository::upsert_user::Names;
+    use pretty_assertions::assert_eq;
 
     #[test]
     fn names_from_empty() {
