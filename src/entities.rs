@@ -29,6 +29,7 @@ pub struct User {
     pub first_name: String,
     pub last_name: String,
     pub school_group: String,
+    pub school_email: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

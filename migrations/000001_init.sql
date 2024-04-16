@@ -1,10 +1,11 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 DROP TABLE IF EXISTS "user";
 
 CREATE TABLE IF NOT EXISTS "user" (
   id SERIAL PRIMARY KEY,
-  uuid UUID DEFAULT gen_random_uuid() NOT NULL,
+  uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   provider_name VARCHAR NOT NULL,
   provider_login VARCHAR NOT NULL UNIQUE,
@@ -17,14 +18,15 @@ CREATE TABLE IF NOT EXISTS "user" (
   teacher BOOLEAN DEFAULT FALSE NOT NULL,
   first_name VARCHAR NOT NULL,
   last_name VARCHAR NOT NULL,
-  school_group VARCHAR NOT NULL
+  school_group VARCHAR NOT NULL,
+  UNIQUE (first_name, last_name)
 );
 
--- DROP TABLE IF EXISTS "module" CASCADE;
+DROP TABLE IF EXISTS "module" CASCADE;
 
 CREATE TABLE IF NOT EXISTS "module" (
   id SERIAL PRIMARY KEY,
-  uuid UUID DEFAULT gen_random_uuid() NOT NULL,
+  uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   name VARCHAR NOT NULL,
   start TIMESTAMPTZ NOT NULL,
@@ -32,11 +34,11 @@ CREATE TABLE IF NOT EXISTS "module" (
   unlock_key VARCHAR NOT NULL
 );
 
--- DROP TABLE IF EXISTS "assignment";
+DROP TABLE IF EXISTS "assignment";
 
 CREATE TABLE IF NOT EXISTS "assignment" (
   id SERIAL PRIMARY KEY,
-  uuid UUID DEFAULT gen_random_uuid() NOT NULL,
+  uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   module_id integer,
   name VARCHAR NOT NULL,
@@ -53,11 +55,4 @@ CREATE TABLE IF NOT EXISTS "assignment" (
         FOREIGN KEY(module_id)
         REFERENCES module(id)
         ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS "user_module" (
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  user_id integer,
-  module_id integer,
-  UNIQUE (user_id, module_id)
 );
