@@ -32,6 +32,14 @@ pub struct User {
     pub school_email: String,
 }
 
+#[derive(Debug, serde::Deserialize)]
+pub struct UserProfileUpdate {
+    pub firstname: String,
+    pub lastname: String,
+    pub school_group: String,
+    pub school_email: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GitHubUserTokens {
     pub access_token: Token,

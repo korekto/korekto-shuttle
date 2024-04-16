@@ -35,6 +35,27 @@ impl Repository {
                 )
             })
     }
+
+    pub async fn update_user_profile(
+        &self,
+        user_id: &i32,
+        user: &entities::UserProfileUpdate,
+    ) -> anyhow::Result<entities::User> {
+        const QUERY: &str = "UPDATE \"user\"
+        SET first_name = $2, last_name = $3, school_group = $4, school_email = $5
+        WHERE id = $1
+        RETURNING *";
+
+        sqlx::query_as::<_, entities::User>(QUERY)
+            .bind(user_id)
+            .bind(&user.firstname)
+            .bind(&user.lastname)
+            .bind(&user.school_group)
+            .bind(&user.school_email)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|err| anyhow!("update_user_profile({:?}, {:?}): {:?}", user_id, user, &err))
+    }
 }
 
 #[derive(PartialEq, Debug)]

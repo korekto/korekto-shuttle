@@ -1,3 +1,4 @@
+use crate::entities::UserProfileUpdate;
 use axum::extract::State;
 use axum::{
     routing::{get, patch},
@@ -14,7 +15,7 @@ mod teacher;
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/user/self", get(user_self))
+        .route("/user/self", get(get_self).put(update_self))
         .route("/settings/redeem_code", patch(redeem_code))
         .nest("/admin", admin::router())
         .nest("/teacher", teacher::router())
@@ -22,22 +23,27 @@ pub fn router() -> Router<AppState> {
 }
 
 #[allow(clippy::unused_async)]
-async fn user_self(AuthenticatedUser(user): AuthenticatedUser) -> Json<User> {
-    let mut role = if user.admin { "Admin" } else { "Student" }.to_string();
-    if user.teacher {
-        role.push_str(" & Teacher");
-    }
-    Json(User {
-        firstname: user.first_name,
-        lastname: user.last_name,
-        school_group: user.school_group,
-        school_email: user.school_email,
-        role,
-        avatar_url: user.avatar_url,
-        installation_id: user.installation_id,
-        admin: user.admin,
-        teacher: user.teacher,
-    })
+async fn get_self(AuthenticatedUser(user): AuthenticatedUser) -> Json<User> {
+    Json(user.into())
+}
+
+#[allow(clippy::unused_async)]
+async fn update_self(
+    AuthenticatedUser(user): AuthenticatedUser,
+    State(state): State<AppState>,
+    Json(update): Json<UserProfileUpdate>,
+) -> Result<Json<User>, StatusCode> {
+    let updated_user = state
+        .service
+        .repo
+        .update_user_profile(&user.id, &update)
+        .await
+        .map_err(|err| {
+            error!("{err}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(updated_user.into()))
 }
 
 async fn redeem_code(
@@ -77,4 +83,24 @@ struct User {
     installation_id: Option<String>,
     admin: bool,
     teacher: bool,
+}
+
+impl From<crate::entities::User> for User {
+    fn from(user: crate::entities::User) -> Self {
+        let mut role = if user.admin { "Admin" } else { "Student" }.to_string();
+        if user.teacher {
+            role.push_str(" & Teacher");
+        }
+        Self {
+            firstname: user.first_name,
+            lastname: user.last_name,
+            school_group: user.school_group,
+            school_email: user.school_email,
+            role,
+            avatar_url: user.avatar_url,
+            installation_id: user.installation_id,
+            admin: user.admin,
+            teacher: user.teacher,
+        }
+    }
 }
