@@ -19,6 +19,7 @@ async fn init_repo() -> anyhow::Result<Repository> {
 }
 
 #[tokio::test]
+#[cfg_attr(not(feature = "tests-with-docker"), ignore)]
 async fn upsert_user_insert_it_when_missing() -> anyhow::Result<()> {
     let repo = init_repo().await?;
 

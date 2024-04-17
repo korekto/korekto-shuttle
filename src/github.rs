@@ -3,6 +3,7 @@ use octocrab::Octocrab;
 
 mod client;
 pub mod client_cache;
+pub mod webhook_models;
 
 pub fn create_gh_app_client(config: &Config) -> anyhow::Result<Octocrab> {
     Ok(Octocrab::builder()

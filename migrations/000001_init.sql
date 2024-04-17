@@ -56,3 +56,13 @@ CREATE TABLE IF NOT EXISTS "assignment" (
         REFERENCES module(id)
         ON DELETE CASCADE
 );
+
+DROP TABLE IF EXISTS "unparseable_webhook";
+
+CREATE TABLE IF NOT EXISTS "unparseable_webhook" (
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  origin VARCHAR NOT NULL,
+  event VARCHAR NOT NULL,
+  payload VARCHAR NOT NULL,
+  error VARCHAR NOT NULL
+);

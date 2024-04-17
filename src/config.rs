@@ -11,6 +11,7 @@ pub struct Config {
     pub github_app_client_secret: String,
     pub github_app_redirect_url: String,
     pub github_app_private_key: String,
+    pub github_app_webhook_secret: String,
     pub github_client_cache_size: NonZeroUsize,
 }
 
@@ -33,6 +34,7 @@ impl TryFrom<SecretStore> for Config {
             github_app_client_secret: get_secret(&value, "GITHUB_APP_CLIENT_SECRET")?,
             github_app_redirect_url: get_secret(&value, "GITHUB_APP_REDIRECT_URL")?,
             github_app_private_key: get_secret(&value, "GITHUB_APP_PRIVATE_KEY")?,
+            github_app_webhook_secret: get_secret(&value, "GITHUB_APP_WEBHOOK_SECRET")?,
             github_client_cache_size: get_secret(&value, "GITHUB_CLIENT_CACHE_SIZE")?
                 .parse()
                 .map_err(|_| anyhow!("GITHUB_APP_PRIVATE_KEY should be a number (usize > 0)"))?,
