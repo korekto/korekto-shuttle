@@ -15,12 +15,14 @@ mod error;
 mod fapi;
 mod spa;
 pub mod state;
+mod webhook;
 
 pub fn router(state: AppState) -> shuttle_axum::AxumService {
     let router = Router::new()
         .route("/", get(spa::welcome_handler))
         .nest("/auth", auth::router())
         .nest("/fapi", fapi::router())
+        .nest("/webhook", webhook::router())
         .route("/*path", get(spa::spa_handler))
         .layer(Extension(spa::static_services()))
         .layer(
@@ -39,4 +41,40 @@ pub fn router(state: AppState) -> shuttle_axum::AxumService {
 async fn fallback(uri: Uri) -> (StatusCode, String) {
     let message = format!("I couldn't find '{}'. Try something else?", uri.path());
     (StatusCode::NOT_FOUND, message)
+}
+
+#[macro_export]
+macro_rules! string_header {
+    ($type:ident, $upcase:ident, $name:literal) => {
+        static $upcase: headers::HeaderName = headers::HeaderName::from_static($name);
+
+        pub struct $type(String);
+
+        impl headers::Header for $type {
+            fn name() -> &'static headers::HeaderName {
+                &$upcase
+            }
+
+            fn decode<'i, I>(values: &mut I) -> Result<Self, headers::Error>
+            where
+                I: Iterator<Item = &'i headers::HeaderValue>,
+            {
+                let value = values.next().ok_or_else(headers::Error::invalid)?;
+
+                if let Ok(str_value) = value.to_str() {
+                    Ok(Self(str_value.to_string()))
+                } else {
+                    Err(headers::Error::invalid())
+                }
+            }
+
+            fn encode<E>(&self, values: &mut E)
+            where
+                E: Extend<headers::HeaderValue>,
+            {
+                let value = headers::HeaderValue::from_str(&self.0).unwrap();
+                values.extend(std::iter::once(value));
+            }
+        }
+    };
 }

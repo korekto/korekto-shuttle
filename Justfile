@@ -23,7 +23,7 @@ build:
   cargo build
 
 test:
-  cargo nextest run --lib --bins --hide-progress-bar --success-output immediate --failure-output immediate
+  cargo nextest run --lib --bins --features tests-with-resources --hide-progress-bar --success-output immediate --failure-output immediate
 
 integration-test:
   @export TIMEFORMAT='%3lR' && time just _integration-test-raw
@@ -35,10 +35,19 @@ _integration-test-raw:
   just integration-test-with-available-pg
 
 integration-test-with-available-pg:
-  cargo nextest run --test '*' --hide-progress-bar --success-output immediate --failure-output immediate
+  cargo nextest run --test '*' --features tests-with-docker --hide-progress-bar --success-output immediate --failure-output immediate
 
 run:
    cargo shuttle run
 
+rund:
+   export RUST_LOG="debug" && just run
+
 shuttle-restart:
   cargo shuttle project restart --idle-minutes 0
+
+start-smee:
+  docker run --name smee-client -d deltaprojects/smee-client -u https://smee.io/WPgvb1aTMNPsas -t http://host.docker.internal:8000/webhook/github
+
+stop-smee:
+  docker rm $(docker stop smee-client)

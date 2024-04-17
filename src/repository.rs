@@ -9,6 +9,7 @@ mod set_user_admin;
 mod set_users_teacher;
 mod teacher_assignments;
 mod teacher_modules;
+mod unparseable_webhook;
 mod update_installation_id;
 mod upsert_user;
 
