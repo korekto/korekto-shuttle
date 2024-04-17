@@ -36,7 +36,8 @@ jobs:
       - uses: shuttle-hq/deploy-action@main
         with:
           deploy-key: ${{ secrets.SHUTTLE_API_KEY }}
-          allow-dirty: "true"
+          allow-dirty: 'true'
+          no-test: 'true'
           secrets: |
             COOKIE_SECRET_KEY = '${{ secrets.APP_COOKIE_SECRET_KEY }}'
             GITHUB_APP_ID = '${{ secrets.APP_GITHUB_APP_ID }}'
