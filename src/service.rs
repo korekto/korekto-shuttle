@@ -3,6 +3,7 @@ use sqlx::PgPool;
 use crate::repository::Repository;
 
 mod find_user_by_id;
+mod schedule_grading;
 
 #[derive(Clone)]
 pub struct Service {

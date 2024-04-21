@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS "assignment" (
         ON DELETE CASCADE
 );
 
-DROP TABLE IF EXISTS "unparseable_webhook";
+--DROP TABLE IF EXISTS "unparseable_webhook";
 
 CREATE TABLE IF NOT EXISTS "unparseable_webhook" (
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -66,3 +66,50 @@ CREATE TABLE IF NOT EXISTS "unparseable_webhook" (
   payload VARCHAR NOT NULL,
   error VARCHAR NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS "user_module" (
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  user_id integer NOT NULL,
+  module_id integer NOT NULL,
+  UNIQUE (user_id, module_id),
+  CONSTRAINT fk_user_module_user_id
+        FOREIGN KEY(user_id)
+        REFERENCES "user"(id)
+        ON DELETE CASCADE,
+  CONSTRAINT fk_user_module_id
+        FOREIGN KEY(module_id)
+        REFERENCES module(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "user_assignment" (
+  id SERIAL PRIMARY KEY,
+  uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  user_id integer NOT NULL,
+  assignment_id integer NOT NULL,
+  repository_linked boolean NOT NULL DEFAULT FALSE,
+  UNIQUE (user_id, assignment_id),
+  CONSTRAINT fk_user_assignment_user_id
+        FOREIGN KEY(user_id)
+        REFERENCES "user"(id)
+        ON DELETE CASCADE,
+  CONSTRAINT fk_user_assignment_id
+        FOREIGN KEY(assignment_id)
+        REFERENCES assignment(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS "grading_task" (
+  user_assignment_id integer NOT NULL,
+  user_provider_name VARCHAR NOT NULL,
+  repository VARCHAR NOT NULL,
+  grader_repository VARCHAR NOT NULL,
+  latest_grading TIMESTAMPTZ,
+  latest_code_update TIMESTAMPTZ,
+  UNIQUE (user_assignment_id, user_provider_name),
+  CONSTRAINT fk_grading_task_user_assignment_id
+        FOREIGN KEY(user_assignment_id)
+        REFERENCES user_assignment(id)
+        ON DELETE CASCADE
+)

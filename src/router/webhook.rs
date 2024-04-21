@@ -1,4 +1,4 @@
-use crate::github::webhook_models::Event;
+use crate::github::webhook_models::GhWebhookEvent;
 use crate::router::state::AppState;
 use crate::string_header;
 use anyhow::anyhow;
@@ -68,9 +68,9 @@ pub fn is_signature_valid(payload: &str, secret: &str, signature: &str) -> anyho
     }
 }
 
-pub fn parse_event(event_type: &str, payload: &str) -> serde_json::Result<Event> {
+pub fn parse_event(event_type: &str, payload: &str) -> serde_json::Result<GhWebhookEvent> {
     let wrapped_payload = format!(r#"{{"event":"{event_type}", "payload":{payload}}}"#);
-    serde_json::from_str::<Event>(&wrapped_payload)
+    serde_json::from_str::<GhWebhookEvent>(&wrapped_payload)
 }
 
 fn decode_hex(s: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
@@ -83,8 +83,9 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
 #[cfg(test)]
 mod tests {
     use crate::github::webhook_models::{
-        Account, Action, Event, Installation, InstallationModification, InstallationRepositories,
-        Push, Repository, RepositoryModification, RepositorySelection, TargetType,
+        Account, Action, GhWebhookEvent, Installation, InstallationModification,
+        InstallationRepositories, Push, Repository, RepositoryModification, RepositorySelection,
+        TargetType,
     };
     use crate::router::webhook::parse_event;
     use pretty_assertions::assert_eq;
@@ -98,7 +99,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Event::Installation(InstallationModification {
+            GhWebhookEvent::Installation(InstallationModification {
                 action: Action::Created,
                 installation: Installation {
                     id: 41266767,
@@ -122,7 +123,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Event::InstallationRepositories(InstallationRepositories {
+            GhWebhookEvent::InstallationRepositories(InstallationRepositories {
                 action: Action::Added,
                 installation: Installation {
                     id: 41266767,
@@ -151,7 +152,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Event::Push(Push {
+            GhWebhookEvent::Push(Push {
                 git_ref: "refs/heads/main".to_string(),
                 repository: Repository {
                     name: "tutu".to_string(),
@@ -170,7 +171,7 @@ mod tests {
 
         assert_eq!(
             result,
-            Event::Repository(RepositoryModification {
+            GhWebhookEvent::Repository(RepositoryModification {
                 action: Action::Created,
                 repository: Repository {
                     name: "tutu".to_string(),

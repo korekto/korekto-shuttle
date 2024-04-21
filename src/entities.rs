@@ -138,3 +138,10 @@ pub struct Assignment {
     pub factor_percentage: i32,
     pub grader_run_url: String,
 }
+
+pub struct NewGradingTask {
+    pub user_assignment_id: String,
+    pub user_provider_name: String,
+    pub repository: String,
+    pub grader_repository: String,
+}
