@@ -132,4 +132,9 @@ impl Repository {
             Ok(query_result) => Ok(query_result.rows_affected()),
         }
     }
+
+    pub async fn list_assignment_repositories(&self) -> anyhow::Result<Vec<String>> {
+        const QUERY: &str = "SELECT repository_name from \"assignment\"";
+        Ok(sqlx::query_scalar(QUERY).fetch_all(&self.pool).await?)
+    }
 }
