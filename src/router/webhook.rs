@@ -85,7 +85,7 @@ mod tests {
     use crate::github::webhook_models::{
         Account, Action, GhWebhookEvent, Installation, InstallationModification,
         InstallationRepositories, Push, Repository, RepositoryModification, RepositorySelection,
-        TargetType,
+        RepositoryWithOwner, TargetType,
     };
     use crate::router::webhook::parse_event;
     use pretty_assertions::assert_eq;
@@ -108,7 +108,22 @@ mod tests {
                     },
                     repository_selection: RepositorySelection::All,
                     target_type: TargetType::User,
-                }
+                },
+                repositories: vec![
+                    Repository {
+                        name: "aash".to_string(),
+                        full_name: "ledoyen/aash".to_string(),
+                        private: false,
+                    },
+                    Repository {
+                        name: "spring-automocker".to_string(),
+                        full_name: "ledoyen/spring-automocker".to_string(),
+                        private: true,
+                    },
+                ],
+                sender: Account {
+                    login: "ledoyen".to_string()
+                },
             })
         );
     }
@@ -140,6 +155,9 @@ mod tests {
                     private: true,
                 },],
                 repositories_removed: vec![],
+                sender: Account {
+                    login: "ledoyen".to_string()
+                },
             })
         );
     }
@@ -154,10 +172,16 @@ mod tests {
             result,
             GhWebhookEvent::Push(Push {
                 git_ref: "refs/heads/main".to_string(),
-                repository: Repository {
+                repository: RepositoryWithOwner {
                     name: "tutu".to_string(),
                     full_name: "ledoyen/tutu".to_string(),
                     private: true,
+                    owner: Account {
+                        login: "ledoyen".to_string()
+                    },
+                },
+                sender: Account {
+                    login: "ledoyen".to_string()
                 },
             })
         );
@@ -173,10 +197,13 @@ mod tests {
             result,
             GhWebhookEvent::Repository(RepositoryModification {
                 action: Action::Created,
-                repository: Repository {
+                repository: RepositoryWithOwner {
                     name: "tutu".to_string(),
                     full_name: "ledoyen/tutu".to_string(),
                     private: true,
+                    owner: Account {
+                        login: "ledoyen".to_string()
+                    },
                 },
             })
         );
