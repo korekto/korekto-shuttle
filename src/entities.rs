@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use sqlx::types::Json;
+use std::fmt;
 use time::{OffsetDateTime, PrimitiveDateTime};
 
 use time::serde::rfc3339 as time_serde;
@@ -30,6 +31,16 @@ pub struct User {
     pub last_name: String,
     pub school_group: String,
     pub school_email: String,
+}
+
+impl fmt::Display for User {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "provider_login={}, provider_name={}, provider_email={}",
+            self.provider_login, self.provider_name, self.provider_email
+        )
+    }
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -70,7 +81,8 @@ pub struct NewModule {
 
 #[derive(sqlx::FromRow, Debug, Clone, Serialize)]
 pub struct ModuleDesc {
-    pub id: String,
+    pub id: i32,
+    pub uuid: String,
     pub name: String,
     #[serde(with = "time_serde")]
     pub start: OffsetDateTime,
@@ -81,7 +93,8 @@ pub struct ModuleDesc {
 
 #[derive(Serialize, Debug, Clone)]
 pub struct Module {
-    pub id: String,
+    pub id: i32,
+    pub uuid: String,
     pub name: String,
     #[serde(with = "time_serde")]
     pub start: OffsetDateTime,
@@ -89,6 +102,10 @@ pub struct Module {
     pub stop: OffsetDateTime,
     pub unlock_key: String,
     pub assignments: Vec<EmbeddedAssignmentDesc>,
+}
+
+pub struct ModuleId {
+    pub uuid: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

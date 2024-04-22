@@ -12,11 +12,13 @@ use crate::router::state::AppState;
 
 mod admin;
 mod teacher;
+mod user_module;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/user/self", get(get_self).put(update_self))
         .route("/settings/redeem_code", patch(redeem_code))
+        .nest("/module", user_module::router())
         .nest("/admin", admin::router())
         .nest("/teacher", teacher::router())
         .fallback(crate::router::fallback)

@@ -9,7 +9,8 @@ use super::Repository;
 
 #[derive(sqlx::FromRow)]
 struct JsonedIntermediateModule {
-    pub id: String,
+    pub id: i32,
+    pub uuid: String,
     pub name: String,
     pub start: OffsetDateTime,
     pub stop: OffsetDateTime,
@@ -20,7 +21,8 @@ struct JsonedIntermediateModule {
 impl Repository {
     pub async fn find_modules(&self) -> anyhow::Result<Vec<entities::ModuleDesc>> {
         const QUERY: &str = "SELECT
-            m.uuid::varchar as id,
+            m.id,
+            m.uuid::varchar as uuid,
             m.name,
             m.start,
             m.stop,
@@ -58,7 +60,8 @@ impl Repository {
                 ORDER BY id asc
             )
             SELECT
-                m.uuid::varchar as \"id\",
+                m.id,
+                m.uuid::varchar as \"uuid\",
                 m.name,
                 m.start,
                 m.stop,
@@ -80,14 +83,7 @@ impl Repository {
             .fetch_one(&self.pool)
             .await?;
 
-        Ok(entities::Module {
-            id: row.id,
-            name: row.name,
-            start: row.start,
-            stop: row.stop,
-            unlock_key: row.unlock_key,
-            assignments: row.assignments.0,
-        })
+        Ok(row.into())
     }
 
     pub async fn update_module(
@@ -115,7 +111,8 @@ impl Repository {
             ) AS a ON TRUE
             WHERE m.uuid::varchar = $1
                 AND m2.uuid::varchar = $1
-            RETURNING m.uuid::varchar as \"id\",
+            RETURNING m.id,
+                m.uuid::varchar as \"uuid\",
                 m.name,
                 m.start,
                 m.stop,
@@ -134,14 +131,7 @@ impl Repository {
             .fetch_one(&self.pool)
             .await?;
 
-        Ok(entities::Module {
-            id: row.id,
-            name: row.name,
-            start: row.start,
-            stop: row.stop,
-            unlock_key: row.unlock_key,
-            assignments: row.assignments.0,
-        })
+        Ok(row.into())
     }
 
     pub async fn delete_modules(&self, uuids: &Vec<String>) -> anyhow::Result<u64> {
@@ -153,6 +143,20 @@ impl Repository {
                 Err(err.into())
             }
             Ok(query_result) => Ok(query_result.rows_affected()),
+        }
+    }
+}
+
+impl From<JsonedIntermediateModule> for entities::Module {
+    fn from(value: JsonedIntermediateModule) -> Self {
+        Self {
+            id: value.id,
+            uuid: value.uuid,
+            name: value.name,
+            start: value.start,
+            stop: value.stop,
+            unlock_key: value.unlock_key,
+            assignments: value.assignments.0,
         }
     }
 }

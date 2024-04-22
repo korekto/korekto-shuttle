@@ -14,6 +14,7 @@ mod unparseable_webhook;
 mod update_installation_id;
 mod upsert_user;
 mod user_asignments;
+mod user_modules;
 
 #[derive(Debug, Clone)]
 pub struct Repository {
