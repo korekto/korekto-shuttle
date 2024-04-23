@@ -15,7 +15,7 @@ impl Repository {
         RETURNING latest_code_update";
 
         Ok(sqlx::query_scalar(QUERY)
-            .bind(&task.user_assignment_id)
+            .bind(task.user_assignment_id)
             .bind(&task.user_provider_name)
             .bind(&task.repository)
             .bind(&task.grader_repository)

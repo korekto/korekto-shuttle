@@ -14,7 +14,7 @@ impl Repository {
             SELECT m.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
             FROM \"module\" m
             WHERE m.uuid::varchar = $1
-            RETURNING *, type as \"a_type\", uuid::varchar as \"id\"
+            RETURNING *, type as \"a_type\", uuid::varchar as \"uuid\"
             ";
 
         Ok(sqlx::query_as::<_, Assignment>(QUERY)
@@ -39,7 +39,8 @@ impl Repository {
         uuid: &str,
     ) -> anyhow::Result<Assignment> {
         const QUERY: &str = "SELECT
-            a.uuid::varchar as \"id\",
+            a.id,
+            a.uuid::varchar as \"uuid\",
             a.name,
             a.start,
             a.stop,
@@ -85,7 +86,7 @@ impl Repository {
             WHERE m.id = a.module_id
                 AND m.uuid::varchar = $1
                 AND a.uuid::varchar = $2
-            RETURNING a.*, a.type as \"a_type\", a.uuid::varchar as \"id\"
+            RETURNING a.*, a.type as \"a_type\", a.uuid::varchar as \"uuid\"
         ";
 
         debug!("Updating assignment: {uuid} (module {module_uuid})");

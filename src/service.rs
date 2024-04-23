@@ -4,6 +4,7 @@ use std::fmt;
 
 use crate::repository::Repository;
 
+pub mod dtos;
 mod find_user_by_id;
 mod schedule_grading;
 mod user_modules;
@@ -21,8 +22,14 @@ impl Service {
     }
 }
 
+impl From<Repository> for Service {
+    fn from(repo: Repository) -> Self {
+        Self { repo }
+    }
+}
+
 #[derive(PartialEq, Eq)]
-pub struct ObfuscatedStr(pub(crate) String);
+pub struct ObfuscatedStr(pub String);
 
 impl fmt::Debug for ObfuscatedStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

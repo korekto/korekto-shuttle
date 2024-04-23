@@ -5,7 +5,7 @@ use axum::{
     Json, Router,
 };
 use http::StatusCode;
-use tracing::{error, info};
+use tracing::error;
 
 use crate::{
     entities::{Assignment, Module, ModuleDesc, NewAssignment, NewModule},
@@ -34,7 +34,6 @@ async fn get_modules(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<ModuleDesc>>, StatusCode> {
     let modules = state.service.repo.find_modules().await.map_err(|err| {
-        info!("toto");
         error!("get_modules {err:#?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;

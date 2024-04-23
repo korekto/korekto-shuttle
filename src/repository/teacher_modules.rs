@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use sqlx::types::Json;
 use time::OffsetDateTime;
 use tracing::{debug, error};
@@ -29,11 +30,12 @@ impl Repository {
             count(a.id) as assignment_count
             FROM \"module\" m
             LEFT JOIN assignment a ON a.module_id = m.id
-            GROUP BY m.uuid, m.name, m.start, m.stop";
+            GROUP BY m.id, m.uuid, m.name, m.start, m.stop";
 
-        Ok(sqlx::query_as::<_, entities::ModuleDesc>(QUERY)
+        sqlx::query_as::<_, entities::ModuleDesc>(QUERY)
             .fetch_all(&self.pool)
-            .await?)
+            .await
+            .map_err(|err| anyhow!("find_modules(): {:?}", &err))
     }
 
     pub async fn create_module(&self, module: &NewModule) -> anyhow::Result<entities::Module> {
