@@ -58,7 +58,7 @@ impl Service {
     ) -> anyhow::Result<()> {
         let retained_repos = self
             .repo
-            .link_user_repositories_to_assignments(user_provider_name, &repo_names)
+            .upsert_user_assignments(user_provider_name, &repo_names, true)
             .await?;
         for retained_assignment in retained_repos {
             self.repo

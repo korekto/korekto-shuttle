@@ -6,12 +6,18 @@ use time::{OffsetDateTime, PrimitiveDateTime};
 use time::serde::rfc3339 as time_serde;
 
 #[derive(Debug)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder),
+    builder(setter(into, strip_option))
+)]
 pub struct NewUser {
     pub provider_name: String,
     // This is the discriminant for upsert
     pub provider_login: String,
     pub provider_email: String,
     pub avatar_url: String,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub github_user_tokens: Option<Json<GitHubUserTokens>>,
 }
 
@@ -70,6 +76,11 @@ pub struct Table {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder),
+    builder(setter(into, strip_option))
+)]
 pub struct NewModule {
     pub name: String,
     #[serde(with = "time_serde")]
@@ -122,25 +133,45 @@ pub struct EmbeddedAssignmentDesc {
 }
 
 #[derive(Deserialize, Debug, Clone)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder),
+    builder(setter(into, strip_option))
+)]
 pub struct NewAssignment {
     pub name: String,
     #[serde(with = "time_serde")]
+    #[cfg_attr(
+        feature = "automatic_test_feature",
+        builder(default = "OffsetDateTime::now_utc()")
+    )]
     pub start: OffsetDateTime,
     #[serde(with = "time_serde")]
+    #[cfg_attr(
+        feature = "automatic_test_feature",
+        builder(default = "OffsetDateTime::now_utc()")
+    )]
     pub stop: OffsetDateTime,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub description: String,
     #[serde(rename = "type")]
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub a_type: String,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub subject_url: String,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub grader_url: String,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub repository_name: String,
     pub factor_percentage: i32,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub grader_run_url: String,
 }
 
 #[derive(sqlx::FromRow, Serialize, Debug, Clone)]
 pub struct Assignment {
-    pub id: String,
+    pub id: i32,
+    pub uuid: String,
     pub name: String,
     #[serde(with = "time_serde")]
     pub start: OffsetDateTime,
@@ -157,8 +188,26 @@ pub struct Assignment {
 }
 
 pub struct NewGradingTask {
-    pub user_assignment_id: String,
+    pub user_assignment_id: i32,
     pub user_provider_name: String,
     pub repository: String,
     pub grader_repository: String,
+}
+
+#[derive(sqlx::FromRow, Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder),
+    builder(setter(into, strip_option))
+)]
+pub struct UserModuleDesc {
+    pub id: i32,
+    pub uuid: String,
+    pub name: String,
+    pub start: OffsetDateTime,
+    pub stop: OffsetDateTime,
+    pub linked_repo_count: i32,
+    pub assignment_count: i32,
+    pub grade: f32,
+    pub latest_update: Option<OffsetDateTime>,
 }

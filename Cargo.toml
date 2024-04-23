@@ -7,6 +7,7 @@ exclude = ["/test_files", ".*"]
 include = ["/migrations", "/src", "/static", "/welcome"]
 
 [features]
+automatic_test_feature = ["dep:derive_builder"]
 tests-with-resources = []
 tests-with-docker = []
 
@@ -42,6 +43,9 @@ uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 hmac = "0.12.1"
 sha2 = "0.10.8"
 
+derive_builder = { version = "0.20.0", optional = true }
+
 [dev-dependencies]
+korekto = { path = ".", features = ["automatic_test_feature"] }
 pretty_assertions = "1.4.0"
 assert_matches2 = "0.1.2"

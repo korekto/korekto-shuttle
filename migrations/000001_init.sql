@@ -82,13 +82,18 @@ CREATE TABLE IF NOT EXISTS "user_module" (
         ON DELETE CASCADE
 );
 
+--DROP TABLE IF EXISTS "grading_task";
+--DROP TABLE IF EXISTS "user_assignment";
+
 CREATE TABLE IF NOT EXISTS "user_assignment" (
   id SERIAL PRIMARY KEY,
   uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   user_id integer NOT NULL,
   assignment_id integer NOT NULL,
   repository_linked boolean NOT NULL DEFAULT FALSE,
+  grade NUMERIC(4, 2) NOT NULL DEFAULT 0,
   UNIQUE (user_id, assignment_id),
   CONSTRAINT fk_user_assignment_user_id
         FOREIGN KEY(user_id)
