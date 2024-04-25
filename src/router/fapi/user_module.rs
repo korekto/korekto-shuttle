@@ -1,8 +1,9 @@
 use axum::extract::Query;
 use axum::response::Redirect;
 use axum::{extract::State, routing::get, Json, Router};
+use axum_extra::either::Either;
 use http::StatusCode;
-use tracing::{error, warn};
+use tracing::{error, info, warn};
 
 use crate::router::auth::AuthenticatedUser;
 use crate::router::state::AppState;
@@ -12,7 +13,7 @@ use crate::service::ObfuscatedStr;
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_modules))
-        .route("/redeem-module", get(redeem_module))
+        .route("/redeem", get(redeem_module))
 }
 
 async fn list_modules(
@@ -36,7 +37,8 @@ async fn redeem_module(
     AuthenticatedUser(user): AuthenticatedUser,
     State(state): State<AppState>,
     Query(query): Query<RedeemQuery>,
-) -> Result<Redirect, StatusCode> {
+) -> Result<Either<Redirect, Json<String>>, StatusCode> {
+    info!("Trying to redeem module with key {}", &query.key);
     let module_id = state
         .service
         .redeem_module(&query.key, &user)
@@ -49,10 +51,20 @@ async fn redeem_module(
             StatusCode::FORBIDDEN
         })?;
 
-    Ok(Redirect::to(&format!("/module/{}", module_id.uuid)))
+    info!("Found module with id {}", &module_id.uuid);
+
+    if query.redirect == Some(false) {
+        Ok(Either::E2(Json(format!("/module/{}", module_id.uuid))))
+    } else {
+        Ok(Either::E1(Redirect::to(&format!(
+            "/module/{}",
+            module_id.uuid
+        ))))
+    }
 }
 
 #[derive(serde::Deserialize)]
 struct RedeemQuery {
     key: ObfuscatedStr,
+    redirect: Option<bool>,
 }

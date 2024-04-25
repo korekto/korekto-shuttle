@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS "unparseable_webhook" (
   error VARCHAR NOT NULL
 );
 
+DROP TABLE IF EXISTS "user_module";
+
 CREATE TABLE IF NOT EXISTS "user_module" (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   user_id integer NOT NULL,
@@ -82,8 +84,8 @@ CREATE TABLE IF NOT EXISTS "user_module" (
         ON DELETE CASCADE
 );
 
---DROP TABLE IF EXISTS "grading_task";
---DROP TABLE IF EXISTS "user_assignment";
+DROP TABLE IF EXISTS "grading_task";
+DROP TABLE IF EXISTS "user_assignment";
 
 CREATE TABLE IF NOT EXISTS "user_assignment" (
   id SERIAL PRIMARY KEY,

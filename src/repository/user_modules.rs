@@ -51,7 +51,7 @@ impl Repository {
                 ua.updated_at
               FROM assignment a
               LEFT JOIN user_assignment ua ON ua.assignment_id = a.id
-              left JOIN \"user\" u ON u.id = ua.user_id
+              LEFT JOIN \"user\" u ON u.id = ua.user_id
               WHERE u.id = $1 OR u.id IS NULL
             )
             SELECT
@@ -62,7 +62,7 @@ impl Repository {
               m.stop,
               SUM(CASE WHEN ma.repository_linked = TRUE THEN 1 ELSE 0 END)::int linked_repo_count,
               COUNT(ma.id)::int assignment_count,
-              SUM(ma.grade * ma.factor_percentage / 100)::real as grade,
+              COALESCE(SUM(ma.grade * ma.factor_percentage / 100), 0)::real as grade,
               MAX(ma.updated_at) as latest_update
             FROM module m
             INNER JOIN user_module um ON um.module_id = m.id

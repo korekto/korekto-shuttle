@@ -90,26 +90,22 @@ pub struct NewModule {
     pub unlock_key: String,
 }
 
-#[derive(sqlx::FromRow, Debug, Clone, Serialize)]
+#[derive(sqlx::FromRow, Debug, Clone)]
 pub struct ModuleDesc {
     pub id: i32,
     pub uuid: String,
     pub name: String,
-    #[serde(with = "time_serde")]
     pub start: OffsetDateTime,
-    #[serde(with = "time_serde")]
     pub stop: OffsetDateTime,
     pub assignment_count: i64,
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Module {
     pub id: i32,
     pub uuid: String,
     pub name: String,
-    #[serde(with = "time_serde")]
     pub start: OffsetDateTime,
-    #[serde(with = "time_serde")]
     pub stop: OffsetDateTime,
     pub unlock_key: String,
     pub assignments: Vec<EmbeddedAssignmentDesc>,
@@ -119,7 +115,7 @@ pub struct ModuleId {
     pub uuid: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct EmbeddedAssignmentDesc {
     pub id: String,
     pub name: String,
@@ -168,17 +164,14 @@ pub struct NewAssignment {
     pub grader_run_url: String,
 }
 
-#[derive(sqlx::FromRow, Serialize, Debug, Clone)]
+#[derive(sqlx::FromRow, Debug, Clone)]
 pub struct Assignment {
     pub id: i32,
     pub uuid: String,
     pub name: String,
-    #[serde(with = "time_serde")]
     pub start: OffsetDateTime,
-    #[serde(with = "time_serde")]
     pub stop: OffsetDateTime,
     pub description: String,
-    #[serde(rename = "type")]
     pub a_type: String,
     pub subject_url: String,
     pub grader_url: String,
