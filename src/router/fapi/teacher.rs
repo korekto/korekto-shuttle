@@ -7,8 +7,9 @@ use axum::{
 use http::StatusCode;
 use tracing::error;
 
+use crate::service::dtos::{AssignmentResponse, ModuleDescResponse, ModuleResponse, VecInto};
 use crate::{
-    entities::{Assignment, Module, ModuleDesc, NewAssignment, NewModule},
+    entities::{NewAssignment, NewModule},
     router::{auth::TeacherUser, state::AppState},
 };
 
@@ -32,19 +33,19 @@ pub fn router() -> Router<AppState> {
 async fn get_modules(
     _user: TeacherUser,
     State(state): State<AppState>,
-) -> Result<Json<Vec<ModuleDesc>>, StatusCode> {
+) -> Result<Json<Vec<ModuleDescResponse>>, StatusCode> {
     let modules = state.service.repo.find_modules().await.map_err(|err| {
         error!("get_modules {err:#?}");
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
-    Ok(Json(modules))
+    Ok(Json(modules.vec_into()))
 }
 
 async fn create_module(
     _user: TeacherUser,
     State(state): State<AppState>,
     Json(module): Json<NewModule>,
-) -> Result<Json<Module>, StatusCode> {
+) -> Result<Json<ModuleResponse>, StatusCode> {
     let module = state
         .service
         .repo
@@ -55,14 +56,14 @@ async fn create_module(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    Ok(Json(module))
+    Ok(Json(module.into()))
 }
 
 async fn get_module(
     _user: TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
-) -> Result<Json<Module>, StatusCode> {
+) -> Result<Json<ModuleResponse>, StatusCode> {
     let module = state
         .service
         .repo
@@ -73,7 +74,7 @@ async fn get_module(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    Ok(Json(module))
+    Ok(Json(module.into()))
 }
 
 async fn update_module(
@@ -81,7 +82,7 @@ async fn update_module(
     State(state): State<AppState>,
     Path(module_id): Path<String>,
     Json(module): Json<NewModule>,
-) -> Result<Json<Module>, StatusCode> {
+) -> Result<Json<ModuleResponse>, StatusCode> {
     let module = state
         .service
         .repo
@@ -92,7 +93,7 @@ async fn update_module(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    Ok(Json(module))
+    Ok(Json(module.into()))
 }
 
 async fn delete_modules(
@@ -118,7 +119,7 @@ async fn create_assignment(
     State(state): State<AppState>,
     Path(module_id): Path<String>,
     Json(assignment): Json<NewAssignment>,
-) -> Result<Json<Assignment>, StatusCode> {
+) -> Result<Json<AssignmentResponse>, StatusCode> {
     let assignment = state
         .service
         .repo
@@ -129,14 +130,14 @@ async fn create_assignment(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    Ok(Json(assignment))
+    Ok(Json(assignment.into()))
 }
 
 async fn get_assignment(
     _user: TeacherUser,
     State(state): State<AppState>,
     Path((module_id, assignment_id)): Path<(String, String)>,
-) -> Result<Json<Assignment>, StatusCode> {
+) -> Result<Json<AssignmentResponse>, StatusCode> {
     let assignment = state
         .service
         .repo
@@ -147,7 +148,7 @@ async fn get_assignment(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    Ok(Json(assignment))
+    Ok(Json(assignment.into()))
 }
 
 async fn update_assignment(
@@ -155,7 +156,7 @@ async fn update_assignment(
     State(state): State<AppState>,
     Path((module_id, assignment_id)): Path<(String, String)>,
     Json(assignment): Json<NewAssignment>,
-) -> Result<Json<Assignment>, StatusCode> {
+) -> Result<Json<AssignmentResponse>, StatusCode> {
     let assignment = state
         .service
         .repo
@@ -166,7 +167,7 @@ async fn update_assignment(
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
-    Ok(Json(assignment))
+    Ok(Json(assignment.into()))
 }
 
 async fn delete_assignments(
