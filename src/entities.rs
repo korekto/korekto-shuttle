@@ -204,3 +204,13 @@ pub struct UserModuleDesc {
     pub grade: f32,
     pub latest_update: Option<OffsetDateTime>,
 }
+
+#[derive(sqlx::FromRow, Debug, Clone)]
+pub struct UnparseableWebhook {
+    pub created_at: OffsetDateTime,
+    pub origin: String,
+    pub event: String,
+    pub payload: String,
+    pub error: String,
+    pub total_count: i32,
+}

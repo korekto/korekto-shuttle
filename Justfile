@@ -35,7 +35,7 @@ _integration-test-raw:
   just integration-test-with-available-pg
 
 integration-test-with-available-pg:
-  cargo nextest run --test '*' --features tests-with-docker --hide-progress-bar --success-output immediate --failure-output immediate
+  cargo nextest run -v --test '*' --features tests-with-docker --hide-progress-bar --success-output immediate --failure-output immediate
 
 run:
    cargo shuttle run

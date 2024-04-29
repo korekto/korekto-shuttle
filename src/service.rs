@@ -7,6 +7,7 @@ use crate::repository::Repository;
 pub mod dtos;
 mod find_user_by_id;
 mod schedule_grading;
+mod unparseable_webhook;
 mod user_modules;
 
 #[derive(Clone)]

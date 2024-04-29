@@ -1,5 +1,9 @@
-use crate::entities::{Assignment, EmbeddedAssignmentDesc, Module, ModuleDesc, UserModuleDesc};
+use crate::entities;
+use crate::entities::{
+    Assignment, EmbeddedAssignmentDesc, Module, ModuleDesc, UnparseableWebhook, UserModuleDesc,
+};
 use serde::Serialize;
+use time::format_description::well_known::Iso8601;
 use time::serde::rfc3339 as dto_time_serde;
 use time::OffsetDateTime;
 
@@ -13,6 +17,51 @@ where
 {
     fn vec_into(self) -> Vec<D> {
         self.into_iter().map(std::convert::Into::into).collect()
+    }
+}
+
+#[derive(serde::Deserialize, validator::Validate, Debug)]
+pub struct PaginationQuery {
+    #[serde(default)]
+    #[validate(range(min = 1))]
+    pub page: i32,
+    #[serde(default)]
+    #[validate(range(min = 10, max = 30))]
+    pub per_page: i32,
+}
+
+impl PaginationQuery {
+    #[must_use]
+    pub const fn new(page: i32, per_page: i32) -> Self {
+        Self { page, per_page }
+    }
+}
+
+#[derive(serde::Serialize, Debug)]
+pub struct Page<T>
+where
+    T: serde::Serialize + std::fmt::Debug,
+{
+    pub page: i32,
+    pub per_page: i32,
+    pub total_page: i32,
+    pub total_count: i32,
+    pub data: Vec<T>,
+}
+
+impl<T> Page<T>
+where
+    T: serde::Serialize + std::fmt::Debug,
+{
+    #[must_use]
+    pub const fn empty(per_page: i32) -> Self {
+        Self {
+            page: 0,
+            per_page,
+            total_page: 0,
+            total_count: 0,
+            data: vec![],
+        }
     }
 }
 
@@ -152,6 +201,64 @@ impl From<Assignment> for AssignmentResponse {
             repository_name: value.repository_name,
             factor_percentage: value.factor_percentage,
             grader_run_url: value.grader_run_url,
+        }
+    }
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct UserForAdminResponse {
+    pub id: i32,
+    pub provider_login: String,
+    pub firstname: String,
+    pub lastname: String,
+    pub school_group: String,
+    pub school_email: String,
+    pub provider_email: String,
+    pub accessible_repos: u8,
+    pub teacher: bool,
+    pub admin: bool,
+    pub installation_id: String,
+    pub created_at: String,
+}
+
+impl TryFrom<entities::User> for UserForAdminResponse {
+    type Error = anyhow::Error;
+
+    fn try_from(user: entities::User) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: user.id,
+            provider_login: user.provider_login,
+            firstname: user.first_name,
+            lastname: user.last_name,
+            school_group: user.school_group,
+            school_email: user.school_email,
+            provider_email: user.provider_email,
+            accessible_repos: 0,
+            teacher: user.teacher,
+            admin: user.admin,
+            installation_id: user.installation_id.unwrap_or_default(),
+            created_at: user.created_at.format(&Iso8601::DEFAULT)?,
+        })
+    }
+}
+
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct UnparseableWebhookResponse {
+    pub created_at: OffsetDateTime,
+    pub origin: String,
+    pub event: String,
+    pub payload: String,
+    pub error: String,
+}
+
+impl From<UnparseableWebhook> for UnparseableWebhookResponse {
+    fn from(value: UnparseableWebhook) -> Self {
+        Self {
+            created_at: value.created_at,
+            origin: value.origin,
+            event: value.event,
+            payload: value.payload,
+            error: value.error,
         }
     }
 }
