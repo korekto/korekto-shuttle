@@ -1,15 +1,17 @@
+use axum::extract::Query;
 use axum::{
-    extract,
     extract::State,
     routing::{get, patch},
-    Router,
+    Json, Router,
 };
 use http::StatusCode;
-use time::format_description::well_known::Iso8601;
 use tracing::error;
+use validator::Validate;
 
+use crate::service::dtos::{
+    Page, PaginationQuery, UnparseableWebhookResponse, UserForAdminResponse,
+};
 use crate::{
-    entities,
     entities::Table,
     router::{auth::AdminUser, state::AppState},
 };
@@ -19,25 +21,29 @@ pub fn router() -> Router<AppState> {
         .route("/table", get(get_tables))
         .route("/user", get(get_users).delete(delete_users))
         .route("/teacher", patch(set_users_teacher))
+        .route(
+            "/unparseable_webhooks",
+            get(get_unparseable_webhooks).delete(delete_unparseable_webhooks),
+        )
 }
 
 async fn get_tables(
     _user: AdminUser,
     State(state): State<AppState>,
-) -> Result<axum::Json<Vec<Table>>, StatusCode> {
+) -> Result<Json<Vec<Table>>, StatusCode> {
     let tables = state
         .service
         .repo
         .find_tables()
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    Ok(axum::Json(tables))
+    Ok(Json(tables))
 }
 
 async fn get_users(
     _user: AdminUser,
     State(state): State<AppState>,
-) -> Result<axum::Json<Vec<User>>, StatusCode> {
+) -> Result<Json<Vec<UserForAdminResponse>>, StatusCode> {
     let users = state
         .service
         .repo
@@ -45,7 +51,7 @@ async fn get_users(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .into_iter()
-        .map(User::try_from)
+        .map(UserForAdminResponse::try_from)
         .filter_map(|user_res| match user_res {
             Ok(user) => Some(user),
             Err(err) => {
@@ -54,13 +60,13 @@ async fn get_users(
             }
         })
         .collect();
-    Ok(axum::Json(users))
+    Ok(Json(users))
 }
 
 async fn delete_users(
     _user: AdminUser,
     State(state): State<AppState>,
-    extract::Json(user_ids): extract::Json<Vec<i32>>,
+    Json(user_ids): Json<Vec<i32>>,
 ) -> Result<(), StatusCode> {
     state
         .service
@@ -74,7 +80,7 @@ async fn delete_users(
 async fn set_users_teacher(
     _user: AdminUser,
     State(state): State<AppState>,
-    extract::Json(user_ids): extract::Json<Vec<i32>>,
+    Json(user_ids): Json<Vec<i32>>,
 ) -> Result<(), StatusCode> {
     state
         .service
@@ -85,39 +91,32 @@ async fn set_users_teacher(
     Ok(())
 }
 
-#[derive(serde::Serialize, Clone)]
-pub struct User {
-    pub id: i32,
-    pub provider_login: String,
-    pub firstname: String,
-    pub lastname: String,
-    pub school_group: String,
-    pub school_email: String,
-    pub provider_email: String,
-    pub accessible_repos: u8,
-    pub teacher: bool,
-    pub admin: bool,
-    pub installation_id: String,
-    pub created_at: String,
+async fn get_unparseable_webhooks(
+    _user: AdminUser,
+    State(state): State<AppState>,
+    Query(pagination): Query<PaginationQuery>,
+) -> Result<Json<Page<UnparseableWebhookResponse>>, (StatusCode, Json<String>)> {
+    pagination
+        .validate()
+        .map_err(|err| (StatusCode::BAD_REQUEST, Json(format!("{err}"))))?;
+    Ok(Json(
+        state
+            .service
+            .get_unparseable_webhooks(&pagination)
+            .await
+            .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))?,
+    ))
 }
 
-impl TryFrom<entities::User> for User {
-    type Error = anyhow::Error;
-
-    fn try_from(user: entities::User) -> Result<Self, Self::Error> {
-        Ok(Self {
-            id: user.id,
-            provider_login: user.provider_login,
-            firstname: user.first_name,
-            lastname: user.last_name,
-            school_group: user.school_group,
-            school_email: user.school_email,
-            provider_email: user.provider_email,
-            accessible_repos: 0,
-            teacher: user.teacher,
-            admin: user.admin,
-            installation_id: user.installation_id.unwrap_or_default(),
-            created_at: user.created_at.format(&Iso8601::DEFAULT)?,
-        })
-    }
+async fn delete_unparseable_webhooks(
+    _user: AdminUser,
+    State(state): State<AppState>,
+) -> Result<(), (StatusCode, Json<String>)> {
+    state
+        .service
+        .repo
+        .delete_unparseable_webhooks()
+        .await
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))?;
+    Ok(())
 }
