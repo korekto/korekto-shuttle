@@ -2,6 +2,13 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 --DROP TABLE IF EXISTS "user";
+--DROP TABLE IF EXISTS "unparseable_webhook";
+
+-- DROP TABLE IF EXISTS "module" CASCADE;
+-- DROP TABLE IF EXISTS "user_module";
+-- DROP TABLE IF EXISTS "grading_task";
+-- DROP TABLE IF EXISTS "user_assignment";
+-- DROP TABLE IF EXISTS "assignment";
 
 CREATE TABLE IF NOT EXISTS "user" (
   id SERIAL PRIMARY KEY,
@@ -22,19 +29,17 @@ CREATE TABLE IF NOT EXISTS "user" (
   UNIQUE (first_name, last_name)
 );
 
---DROP TABLE IF EXISTS "module" CASCADE;
-
 CREATE TABLE IF NOT EXISTS "module" (
   id SERIAL PRIMARY KEY,
   uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   name VARCHAR NOT NULL,
+  description VARCHAR NOT NULL,
+  source_url VARCHAR NOT NULL,
   start TIMESTAMPTZ NOT NULL,
   stop TIMESTAMPTZ NOT NULL,
   unlock_key VARCHAR NOT NULL
 );
-
---DROP TABLE IF EXISTS "assignment";
 
 CREATE TABLE IF NOT EXISTS "assignment" (
   id SERIAL PRIMARY KEY,
@@ -42,9 +47,9 @@ CREATE TABLE IF NOT EXISTS "assignment" (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   module_id integer,
   name VARCHAR NOT NULL,
+  description VARCHAR NOT NULL,
   start TIMESTAMPTZ NOT NULL,
   stop TIMESTAMPTZ NOT NULL,
-  description VARCHAR NOT NULL,
   type VARCHAR NOT NULL,
   factor_percentage INTEGER NOT NULL,
   subject_url VARCHAR NOT NULL,
@@ -57,8 +62,6 @@ CREATE TABLE IF NOT EXISTS "assignment" (
         ON DELETE CASCADE
 );
 
---DROP TABLE IF EXISTS "unparseable_webhook";
-
 CREATE TABLE IF NOT EXISTS "unparseable_webhook" (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   origin VARCHAR NOT NULL,
@@ -66,8 +69,6 @@ CREATE TABLE IF NOT EXISTS "unparseable_webhook" (
   payload VARCHAR NOT NULL,
   error VARCHAR NOT NULL
 );
-
-DROP TABLE IF EXISTS "user_module";
 
 CREATE TABLE IF NOT EXISTS "user_module" (
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -83,9 +84,6 @@ CREATE TABLE IF NOT EXISTS "user_module" (
         REFERENCES module(id)
         ON DELETE CASCADE
 );
-
-DROP TABLE IF EXISTS "grading_task";
-DROP TABLE IF EXISTS "user_assignment";
 
 CREATE TABLE IF NOT EXISTS "user_assignment" (
   id SERIAL PRIMARY KEY,

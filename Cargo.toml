@@ -43,6 +43,7 @@ uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 hmac = "0.12.1"
 sha2 = "0.10.8"
 validator = { version = "0.18", features = ["derive"] }
+const_format = "0.2.32"
 
 derive_builder = { version = "0.20.0", optional = true }
 

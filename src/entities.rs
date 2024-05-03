@@ -3,7 +3,7 @@ use sqlx::types::Json;
 use std::fmt;
 use time::{OffsetDateTime, PrimitiveDateTime};
 
-use time::serde::rfc3339 as time_serde;
+use time::serde::rfc3339 as entity_time_serde;
 
 #[derive(Debug)]
 #[cfg_attr(
@@ -83,11 +83,13 @@ pub struct Table {
 )]
 pub struct NewModule {
     pub name: String,
-    #[serde(with = "time_serde")]
+    pub description: String,
+    #[serde(with = "entity_time_serde")]
     pub start: OffsetDateTime,
-    #[serde(with = "time_serde")]
+    #[serde(with = "entity_time_serde")]
     pub stop: OffsetDateTime,
     pub unlock_key: String,
+    pub source_url: String,
 }
 
 #[derive(sqlx::FromRow, Debug, Clone)]
@@ -105,9 +107,11 @@ pub struct Module {
     pub id: i32,
     pub uuid: String,
     pub name: String,
+    pub description: String,
     pub start: OffsetDateTime,
     pub stop: OffsetDateTime,
     pub unlock_key: String,
+    pub source_url: String,
     pub assignments: Vec<EmbeddedAssignmentDesc>,
 }
 
@@ -121,9 +125,9 @@ pub struct EmbeddedAssignmentDesc {
     pub name: String,
     #[serde(rename = "type")]
     pub a_type: String,
-    #[serde(with = "time_serde")]
+    #[serde(with = "entity_time_serde")]
     pub start: OffsetDateTime,
-    #[serde(with = "time_serde")]
+    #[serde(with = "entity_time_serde")]
     pub stop: OffsetDateTime,
     pub factor_percentage: i32,
 }
@@ -136,20 +140,20 @@ pub struct EmbeddedAssignmentDesc {
 )]
 pub struct NewAssignment {
     pub name: String,
-    #[serde(with = "time_serde")]
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub description: String,
+    #[serde(with = "entity_time_serde")]
     #[cfg_attr(
         feature = "automatic_test_feature",
         builder(default = "OffsetDateTime::now_utc()")
     )]
     pub start: OffsetDateTime,
-    #[serde(with = "time_serde")]
+    #[serde(with = "entity_time_serde")]
     #[cfg_attr(
         feature = "automatic_test_feature",
         builder(default = "OffsetDateTime::now_utc()")
     )]
     pub stop: OffsetDateTime,
-    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
-    pub description: String,
     #[serde(rename = "type")]
     #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub a_type: String,
@@ -213,4 +217,36 @@ pub struct UnparseableWebhook {
     pub payload: String,
     pub error: String,
     pub total_count: i32,
+}
+
+#[derive(sqlx::FromRow, Debug, Clone)]
+pub struct UserModule {
+    pub id: i32,
+    pub uuid: String,
+    pub name: String,
+    pub description: String,
+    pub start: OffsetDateTime,
+    pub stop: OffsetDateTime,
+    pub latest_update: Option<OffsetDateTime>,
+    pub source_url: String,
+    pub assignments: Json<Vec<UserAssignmentDesc>>,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct UserAssignmentDesc {
+    pub id: i32,
+    pub uuid: String,
+    pub name: String,
+    pub description: String,
+    #[serde(with = "entity_time_serde")]
+    pub start: OffsetDateTime,
+    #[serde(with = "entity_time_serde")]
+    pub stop: OffsetDateTime,
+    pub a_type: String,
+    pub subject_url: String,
+    pub grader_url: String,
+    pub repository_name: String,
+    pub factor_percentage: i32,
+    pub grade: f32,
+    pub repo_linked: bool,
 }
