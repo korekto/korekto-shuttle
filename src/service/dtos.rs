@@ -1,6 +1,7 @@
 use crate::entities;
 use crate::entities::{
-    Assignment, EmbeddedAssignmentDesc, Module, ModuleDesc, UnparseableWebhook, UserModuleDesc,
+    Assignment, EmbeddedAssignmentDesc, Module, ModuleDesc, UnparseableWebhook, UserAssignmentDesc,
+    UserModule, UserModuleDesc,
 };
 use serde::Serialize;
 use time::format_description::well_known::Iso8601;
@@ -66,7 +67,7 @@ where
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct UserModuleResponse {
+pub struct UserModuleDescResponse {
     pub id: String,
     pub name: String,
     #[serde(with = "dto_time_serde")]
@@ -80,7 +81,7 @@ pub struct UserModuleResponse {
     pub latest_update: Option<OffsetDateTime>,
 }
 
-impl From<UserModuleDesc> for UserModuleResponse {
+impl From<UserModuleDesc> for UserModuleDescResponse {
     fn from(value: UserModuleDesc) -> Self {
         Self {
             id: value.uuid,
@@ -96,7 +97,7 @@ impl From<UserModuleDesc> for UserModuleResponse {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct ModuleDescResponse {
+pub struct TeacherModuleDescResponse {
     pub id: String,
     pub name: String,
     #[serde(with = "dto_time_serde")]
@@ -106,7 +107,7 @@ pub struct ModuleDescResponse {
     pub assignment_count: i64,
 }
 
-impl From<ModuleDesc> for ModuleDescResponse {
+impl From<ModuleDesc> for TeacherModuleDescResponse {
     fn from(value: ModuleDesc) -> Self {
         Self {
             id: value.uuid,
@@ -119,32 +120,36 @@ impl From<ModuleDesc> for ModuleDescResponse {
 }
 
 #[derive(Debug, Clone, Serialize)]
-pub struct ModuleResponse {
+pub struct TeacherModuleResponse {
     pub id: String,
     pub name: String,
+    pub description: String,
     #[serde(with = "dto_time_serde")]
     pub start: OffsetDateTime,
     #[serde(with = "dto_time_serde")]
     pub stop: OffsetDateTime,
     pub unlock_key: String,
-    pub assignments: Vec<AssignmentDescResponse>,
+    pub source_url: String,
+    pub assignments: Vec<TeacherAssignmentDescResponse>,
 }
 
-impl From<Module> for ModuleResponse {
+impl From<Module> for TeacherModuleResponse {
     fn from(value: Module) -> Self {
         Self {
             id: value.uuid,
             name: value.name,
+            description: value.description,
             start: value.start,
             stop: value.stop,
             unlock_key: value.unlock_key,
+            source_url: value.source_url,
             assignments: value.assignments.vec_into(),
         }
     }
 }
 
 #[derive(Serialize, Debug, Clone)]
-pub struct AssignmentDescResponse {
+pub struct TeacherAssignmentDescResponse {
     pub id: String,
     pub name: String,
     #[serde(rename = "type")]
@@ -156,7 +161,7 @@ pub struct AssignmentDescResponse {
     pub factor_percentage: i32,
 }
 
-impl From<EmbeddedAssignmentDesc> for AssignmentDescResponse {
+impl From<EmbeddedAssignmentDesc> for TeacherAssignmentDescResponse {
     fn from(value: EmbeddedAssignmentDesc) -> Self {
         Self {
             id: value.id,
@@ -170,7 +175,7 @@ impl From<EmbeddedAssignmentDesc> for AssignmentDescResponse {
 }
 
 #[derive(Serialize, Debug, Clone)]
-pub struct AssignmentResponse {
+pub struct TeacherAssignmentResponse {
     pub id: String,
     pub name: String,
     #[serde(with = "dto_time_serde")]
@@ -187,7 +192,7 @@ pub struct AssignmentResponse {
     pub grader_run_url: String,
 }
 
-impl From<Assignment> for AssignmentResponse {
+impl From<Assignment> for TeacherAssignmentResponse {
     fn from(value: Assignment) -> Self {
         Self {
             id: value.uuid,
@@ -244,6 +249,7 @@ impl TryFrom<entities::User> for UserForAdminResponse {
 
 #[derive(serde::Serialize, Debug, Clone)]
 pub struct UnparseableWebhookResponse {
+    #[serde(with = "dto_time_serde")]
     pub created_at: OffsetDateTime,
     pub origin: String,
     pub event: String,
@@ -259,6 +265,85 @@ impl From<UnparseableWebhook> for UnparseableWebhookResponse {
             event: value.event,
             payload: value.payload,
             error: value.error,
+        }
+    }
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder),
+    builder(setter(into, strip_option))
+)]
+pub struct UserModuleResponse {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    #[serde(with = "dto_time_serde")]
+    pub start: OffsetDateTime,
+    #[serde(with = "dto_time_serde")]
+    pub stop: OffsetDateTime,
+    pub latest_update: Option<OffsetDateTime>,
+    pub source_url: String,
+    pub locked: bool,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub lock_reason: Option<String>,
+    pub assignments: Vec<UserAssignmentDescResponse>,
+}
+
+impl From<UserModule> for UserModuleResponse {
+    fn from(value: UserModule) -> Self {
+        Self {
+            id: value.uuid,
+            name: value.name,
+            description: value.description,
+            start: value.start,
+            stop: value.stop,
+            latest_update: value.latest_update,
+            source_url: value.source_url,
+            locked: false,
+            lock_reason: None,
+            assignments: value.assignments.0.vec_into(),
+        }
+    }
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder),
+    builder(setter(into, strip_option))
+)]
+pub struct UserAssignmentDescResponse {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    #[serde(with = "dto_time_serde")]
+    pub start: OffsetDateTime,
+    #[serde(with = "dto_time_serde")]
+    pub stop: OffsetDateTime,
+    pub a_type: String,
+    pub factor_percentage: i32,
+    pub locked: bool,
+    pub grade: f32,
+    pub repo_linked: bool,
+    pub repository_name: String,
+}
+
+impl From<UserAssignmentDesc> for UserAssignmentDescResponse {
+    fn from(value: UserAssignmentDesc) -> Self {
+        Self {
+            id: value.uuid,
+            name: value.name,
+            description: value.description,
+            start: value.start,
+            stop: value.stop,
+            a_type: value.a_type,
+            factor_percentage: value.factor_percentage,
+            locked: false,
+            grade: value.grade,
+            repo_linked: value.repo_linked,
+            repository_name: value.repository_name,
         }
     }
 }

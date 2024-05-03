@@ -13,9 +13,11 @@ struct JsonedIntermediateModule {
     pub id: i32,
     pub uuid: String,
     pub name: String,
+    pub description: String,
     pub start: OffsetDateTime,
     pub stop: OffsetDateTime,
     pub unlock_key: String,
+    pub source_url: String,
     pub assignments: Json<Vec<EmbeddedAssignmentDesc>>,
 }
 
@@ -40,15 +42,17 @@ impl Repository {
 
     pub async fn create_module(&self, module: &NewModule) -> anyhow::Result<entities::Module> {
         const QUERY: &str = "INSERT INTO \"module\"
-            (name, start, stop, unlock_key)
-            VALUES ($1, $2, $3, $4)
+            (name, description, start, stop, unlock_key, source_url)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING uuid::varchar";
 
         let uuid: String = sqlx::query_scalar(QUERY)
             .bind(&module.name)
+            .bind(&module.description)
             .bind(module.start)
             .bind(module.stop)
             .bind(&module.unlock_key)
+            .bind(&module.source_url)
             .fetch_one(&self.pool)
             .await?;
         self.find_module(&uuid).await
@@ -65,9 +69,11 @@ impl Repository {
                 m.id,
                 m.uuid::varchar as \"uuid\",
                 m.name,
+                m.description,
                 m.start,
                 m.stop,
                 m.unlock_key,
+                m.source_url,
                 a.assignments
             FROM \"module\" m
             LEFT JOIN LATERAL (
@@ -101,9 +107,11 @@ impl Repository {
             )
             UPDATE \"module\" AS m SET
                 name = $2,
-                start = $3,
-                stop = $4,
-                unlock_key = $5
+                description = $3,
+                start = $4,
+                stop = $5,
+                unlock_key = $6,
+                source_url = $7
             FROM \"module\" AS m2
             LEFT JOIN LATERAL (
                 SELECT
@@ -127,9 +135,11 @@ impl Repository {
         let row = sqlx::query_as::<_, JsonedIntermediateModule>(QUERY)
             .bind(uuid)
             .bind(&module.name)
+            .bind(&module.description)
             .bind(module.start)
             .bind(module.stop)
             .bind(&module.unlock_key)
+            .bind(&module.source_url)
             .fetch_one(&self.pool)
             .await?;
 
@@ -155,9 +165,11 @@ impl From<JsonedIntermediateModule> for entities::Module {
             id: value.id,
             uuid: value.uuid,
             name: value.name,
+            description: value.description,
             start: value.start,
             stop: value.stop,
             unlock_key: value.unlock_key,
+            source_url: value.source_url,
             assignments: value.assignments.0,
         }
     }

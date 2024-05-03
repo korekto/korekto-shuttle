@@ -1,4 +1,4 @@
-use axum::extract::Query;
+use axum::extract::{Path, Query};
 use axum::response::Redirect;
 use axum::{extract::State, routing::get, Json, Router};
 use axum_extra::either::Either;
@@ -7,19 +7,38 @@ use tracing::{error, info, warn};
 
 use crate::router::auth::AuthenticatedUser;
 use crate::router::state::AppState;
-use crate::service::dtos::{UserModuleResponse, VecInto};
+use crate::service::dtos::{UserModuleDescResponse, UserModuleResponse, VecInto};
 use crate::service::ObfuscatedStr;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/", get(list_modules))
         .route("/redeem", get(redeem_module))
+        .route("/:module_id", get(get_module))
+}
+
+async fn get_module(
+    AuthenticatedUser(user): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path(module_id): Path<String>,
+) -> Result<Json<UserModuleResponse>, StatusCode> {
+    let module = state
+        .service
+        .repo
+        .get_module(&user, &module_id)
+        .await
+        .map_err(|err| {
+            error!("get_module {err:#?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    Ok(Json(module.into()))
 }
 
 async fn list_modules(
     AuthenticatedUser(user): AuthenticatedUser,
     State(state): State<AppState>,
-) -> Result<Json<Vec<UserModuleResponse>>, StatusCode> {
+) -> Result<Json<Vec<UserModuleDescResponse>>, StatusCode> {
     let modules = state
         .service
         .repo
@@ -29,7 +48,7 @@ async fn list_modules(
             error!("list_modules {err:#?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
-    let resp = VecInto::<UserModuleResponse>::vec_into(modules);
+    let resp = VecInto::<UserModuleDescResponse>::vec_into(modules);
     Ok(Json(resp))
 }
 
