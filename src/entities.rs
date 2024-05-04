@@ -24,6 +24,7 @@ pub struct NewUser {
 #[derive(sqlx::FromRow, Debug, Clone)]
 pub struct User {
     pub id: i32,
+    pub uuid: String,
     pub provider_name: String,
     pub provider_login: String,
     pub provider_email: String,
@@ -121,7 +122,8 @@ pub struct ModuleId {
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct EmbeddedAssignmentDesc {
-    pub id: String,
+    pub id: i32,
+    pub uuid: String,
     pub name: String,
     #[serde(rename = "type")]
     pub a_type: String,
@@ -145,13 +147,13 @@ pub struct NewAssignment {
     #[serde(with = "entity_time_serde")]
     #[cfg_attr(
         feature = "automatic_test_feature",
-        builder(default = "OffsetDateTime::now_utc()")
+        builder(default = "OffsetDateTime::UNIX_EPOCH")
     )]
     pub start: OffsetDateTime,
     #[serde(with = "entity_time_serde")]
     #[cfg_attr(
         feature = "automatic_test_feature",
-        builder(default = "OffsetDateTime::now_utc()")
+        builder(default = "OffsetDateTime::UNIX_EPOCH")
     )]
     pub stop: OffsetDateTime,
     #[serde(rename = "type")]
@@ -192,11 +194,6 @@ pub struct NewGradingTask {
 }
 
 #[derive(sqlx::FromRow, Debug, Clone, PartialEq)]
-#[cfg_attr(
-    feature = "automatic_test_feature",
-    derive(derive_builder::Builder),
-    builder(setter(into, strip_option))
-)]
 pub struct UserModuleDesc {
     pub id: i32,
     pub uuid: String,
@@ -249,4 +246,43 @@ pub struct UserAssignmentDesc {
     pub factor_percentage: i32,
     pub grade: f32,
     pub repo_linked: bool,
+}
+
+#[derive(sqlx::FromRow, Debug, Clone)]
+pub struct UserAssignment {
+    pub id: i32,
+    pub uuid: String,
+    pub name: String,
+    pub description: String,
+    pub start: OffsetDateTime,
+    pub stop: OffsetDateTime,
+    pub a_type: String,
+    pub factor_percentage: i32,
+    pub subject_url: String,
+    pub grader_url: String,
+    pub repository_name: String,
+    pub repo_linked: bool,
+    pub user_provider_login: String,
+    pub normalized_grade: f32,
+    pub grades_history: Json<Vec<InstantGrade>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct InstantGrade {
+    pub grade: f32,
+    pub max_grade: f32,
+    #[serde(with = "entity_time_serde")]
+    pub time: OffsetDateTime,
+    pub short_commit_id: String,
+    pub commit_url: String,
+    pub grading_log_url: String,
+    pub details: Vec<Details>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Details {
+    pub name: String,
+    pub grade: f32,
+    pub max_grade: Option<f32>,
+    pub messages: Vec<String>,
 }

@@ -78,7 +78,7 @@ impl Repository {
             FROM \"module\" m
             LEFT JOIN LATERAL (
                 SELECT
-                    coalesce(jsonb_agg(to_jsonb(a.*) || jsonb_build_object('a_type', a.type, 'id', a.uuid)), '[]'::jsonb) AS assignments
+                    coalesce(jsonb_agg(to_jsonb(a.*) || jsonb_build_object('a_type', a.type)), '[]'::jsonb) AS assignments
                 FROM ORDERED_ASSIGNMENTS A
                 WHERE m.id = A.module_id
             ) AS a ON TRUE
@@ -115,7 +115,7 @@ impl Repository {
             FROM \"module\" AS m2
             LEFT JOIN LATERAL (
                 SELECT
-                    coalesce(jsonb_agg(to_jsonb(a.*) || jsonb_build_object('a_type', a.type, 'id', a.uuid)), '[]'::jsonb) AS assignments
+                    coalesce(jsonb_agg(to_jsonb(a.*) || jsonb_build_object('a_type', a.type)), '[]'::jsonb) AS assignments
                 FROM ORDERED_ASSIGNMENTS A
                 WHERE m2.id = A.module_id
             ) AS a ON TRUE

@@ -51,3 +51,6 @@ start-smee:
 
 stop-smee:
   docker rm $(docker stop smee-client)
+
+start-pg:
+  docker run --name it-postgres -p 5433:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_DB=postgres postgres:14-alpine

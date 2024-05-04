@@ -1,8 +1,9 @@
 use crate::entities;
 use crate::entities::{
-    Assignment, EmbeddedAssignmentDesc, Module, ModuleDesc, UnparseableWebhook, UserAssignmentDesc,
-    UserModule, UserModuleDesc,
+    Assignment, Details, EmbeddedAssignmentDesc, InstantGrade, Module, ModuleDesc,
+    UnparseableWebhook, UserAssignment, UserAssignmentDesc, UserModule, UserModuleDesc,
 };
+use rust_decimal::Decimal;
 use serde::Serialize;
 use time::format_description::well_known::Iso8601;
 use time::serde::rfc3339 as dto_time_serde;
@@ -67,6 +68,11 @@ where
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder, PartialEq, Eq),
+    builder(setter(into, strip_option))
+)]
 pub struct UserModuleDescResponse {
     pub id: String,
     pub name: String,
@@ -76,7 +82,7 @@ pub struct UserModuleDescResponse {
     pub stop: OffsetDateTime,
     pub linked_repo_count: i32,
     pub assignment_count: i32,
-    pub grade: f32,
+    pub grade: Decimal,
     //#[serde(with = "time_serde")]
     pub latest_update: Option<OffsetDateTime>,
 }
@@ -90,7 +96,9 @@ impl From<UserModuleDesc> for UserModuleDescResponse {
             stop: value.stop,
             linked_repo_count: value.linked_repo_count,
             assignment_count: value.assignment_count,
-            grade: value.grade,
+            grade: Decimal::from_f32_retain(value.grade)
+                .unwrap_or_default()
+                .round_dp(2),
             latest_update: value.latest_update,
         }
     }
@@ -164,7 +172,7 @@ pub struct TeacherAssignmentDescResponse {
 impl From<EmbeddedAssignmentDesc> for TeacherAssignmentDescResponse {
     fn from(value: EmbeddedAssignmentDesc) -> Self {
         Self {
-            id: value.id,
+            id: value.uuid,
             name: value.name,
             a_type: value.a_type,
             start: value.start,
@@ -269,7 +277,7 @@ impl From<UnparseableWebhook> for UnparseableWebhookResponse {
     }
 }
 
-#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "automatic_test_feature",
     derive(derive_builder::Builder),
@@ -308,7 +316,7 @@ impl From<UserModule> for UserModuleResponse {
     }
 }
 
-#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
 #[cfg_attr(
     feature = "automatic_test_feature",
     derive(derive_builder::Builder),
@@ -322,10 +330,11 @@ pub struct UserAssignmentDescResponse {
     pub start: OffsetDateTime,
     #[serde(with = "dto_time_serde")]
     pub stop: OffsetDateTime,
+    #[serde(rename = "type")]
     pub a_type: String,
     pub factor_percentage: i32,
     pub locked: bool,
-    pub grade: f32,
+    pub grade: Decimal,
     pub repo_linked: bool,
     pub repository_name: String,
 }
@@ -341,9 +350,158 @@ impl From<UserAssignmentDesc> for UserAssignmentDescResponse {
             a_type: value.a_type,
             factor_percentage: value.factor_percentage,
             locked: false,
-            grade: value.grade,
+            grade: Decimal::from_f32_retain(value.grade)
+                .unwrap_or_default()
+                .round_dp(2),
             repo_linked: value.repo_linked,
             repository_name: value.repository_name,
+        }
+    }
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder),
+    builder(setter(into, strip_option))
+)]
+pub struct UserAssignmentResponse {
+    pub id: String,
+    #[serde(rename = "type")]
+    pub a_type: String,
+    pub name: String,
+    pub description: String,
+    #[serde(with = "dto_time_serde")]
+    pub start: OffsetDateTime,
+    #[serde(with = "dto_time_serde")]
+    pub stop: OffsetDateTime,
+    pub repo_linked: bool,
+    pub repository_name: String,
+    pub subject_url: String,
+    pub grader_url: String,
+    pub repository_url: String,
+    pub factor_percentage: i32,
+    pub normalized_grade: f32,
+    pub locked: bool,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub lock_reason: Option<String>,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub latest_run: Option<CompleteRunInfoResponse>,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub ongoing_run: Option<RunInfo>,
+}
+
+impl From<UserAssignment> for UserAssignmentResponse {
+    fn from(value: UserAssignment) -> Self {
+        Self {
+            id: value.uuid,
+            name: value.name,
+            description: value.description,
+            start: value.start,
+            stop: value.stop,
+            a_type: value.a_type,
+            factor_percentage: value.factor_percentage,
+            normalized_grade: value.normalized_grade,
+            repo_linked: value.repo_linked,
+            repository_url: format!(
+                "https://github.com/{}/{}",
+                &value.user_provider_login, &value.repository_name
+            ),
+            repository_name: value.repository_name,
+            subject_url: value.subject_url,
+            grader_url: value.grader_url,
+            latest_run: value.grades_history.last().map(|g| g.clone().into()),
+            locked: false,
+            lock_reason: None,
+            ongoing_run: None,
+        }
+    }
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq, Eq)]
+pub struct RunInfo {
+    pub short_commit_id: String,
+    pub commit_url: String,
+    pub grading_log_url: String,
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder),
+    builder(setter(into, strip_option))
+)]
+pub struct CompleteRunInfoResponse {
+    pub short_commit_id: String,
+    pub commit_url: String,
+    pub grading_log_url: String,
+    #[serde(with = "dto_time_serde")]
+    pub time: OffsetDateTime,
+    pub details: Vec<DetailsResponse>,
+}
+
+impl From<InstantGrade> for CompleteRunInfoResponse {
+    fn from(value: InstantGrade) -> Self {
+        Self {
+            short_commit_id: value.short_commit_id,
+            commit_url: value.commit_url,
+            grading_log_url: value.grading_log_url,
+            time: value.time,
+            details: value.details.vec_into(),
+        }
+    }
+}
+
+#[derive(serde::Serialize, Debug, Clone, PartialEq)]
+#[cfg_attr(
+    feature = "automatic_test_feature",
+    derive(derive_builder::Builder),
+    builder(setter(into, strip_option))
+)]
+pub struct DetailsResponse {
+    pub name: String,
+    pub grade: f32,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub max_grade: Option<f32>,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub messages: Vec<String>,
+}
+
+impl From<Details> for DetailsResponse {
+    fn from(value: Details) -> Self {
+        Self {
+            name: value.name,
+            grade: value.grade,
+            max_grade: value.max_grade,
+            messages: value.messages,
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct NewGradeRequest {
+    pub time: Option<OffsetDateTime>,
+    pub short_commit_id: String,
+    pub commit_url: String,
+    pub grading_log_url: String,
+    pub details: Vec<NewGradeDetailRequest>,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct NewGradeDetailRequest {
+    pub name: String,
+    pub grade: f32,
+    pub max_grade: Option<f32>,
+    pub messages: Vec<String>,
+}
+
+impl From<NewGradeDetailRequest> for Details {
+    fn from(value: NewGradeDetailRequest) -> Self {
+        Self {
+            name: value.name,
+            grade: value.grade,
+            max_grade: value.max_grade,
+            messages: value.messages,
         }
     }
 }

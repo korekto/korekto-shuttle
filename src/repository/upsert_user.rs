@@ -12,7 +12,7 @@ impl Repository {
         ON CONFLICT (provider_login) DO UPDATE
         SET (provider_name, provider_email, avatar_url, github_user_tokens)
         = ($1, $3, $4, $5)
-        RETURNING *";
+        RETURNING *, uuid::varchar as uuid";
 
         let names = Names::split_name(&user.provider_name);
 
@@ -44,7 +44,7 @@ impl Repository {
         const QUERY: &str = "UPDATE \"user\"
         SET first_name = $2, last_name = $3, school_group = $4, school_email = $5
         WHERE id = $1
-        RETURNING *";
+        RETURNING *, uuid::varchar as uuid";
 
         sqlx::query_as::<_, entities::User>(QUERY)
             .bind(user_id)

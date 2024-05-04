@@ -20,7 +20,7 @@ const MATCHING_ASSIGNMENTS_CTE: &str = "\
             a.grader_url,
             a.repository_name,
             COALESCE(ua.repository_linked, FALSE) as repo_linked,
-            COALESCE(ua.grade, 0) as grade,
+            COALESCE(ua.normalized_grade, 0) as grade,
             ua.updated_at
           FROM assignment a
           LEFT JOIN user_assignment ua ON ua.assignment_id = a.id

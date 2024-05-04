@@ -8,6 +8,7 @@ pub mod dtos;
 mod find_user_by_id;
 mod schedule_grading;
 mod unparseable_webhook;
+mod user_assignments;
 mod user_modules;
 
 #[derive(Clone)]
@@ -31,6 +32,12 @@ impl From<Repository> for Service {
 
 #[derive(PartialEq, Eq)]
 pub struct ObfuscatedStr(pub String);
+
+impl ObfuscatedStr {
+    pub fn new<T: Into<String>>(value: T) -> Self {
+        Self(value.into())
+    }
+}
 
 impl fmt::Debug for ObfuscatedStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
