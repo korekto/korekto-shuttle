@@ -7,12 +7,13 @@ use super::Repository;
 
 impl Repository {
     pub async fn find_user_by_id(&self, user_id: &i32) -> anyhow::Result<entities::User> {
-        const QUERY: &str = "SELECT * FROM \"user\" WHERE id = $1";
+        const QUERY: &str = "SELECT *, uuid::varchar as uuid FROM \"user\" WHERE id = $1";
         self.find_user_by(QUERY, user_id, "id").await
     }
 
     pub async fn find_user_by_provider_login(&self, login: &str) -> anyhow::Result<entities::User> {
-        const QUERY: &str = "SELECT * FROM \"user\" WHERE provider_login = $1";
+        const QUERY: &str =
+            "SELECT *, uuid::varchar as uuid FROM \"user\" WHERE provider_login = $1";
         self.find_user_by(QUERY, login, "provider_login").await
     }
 

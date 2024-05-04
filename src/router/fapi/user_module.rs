@@ -7,7 +7,9 @@ use tracing::{error, info, warn};
 
 use crate::router::auth::AuthenticatedUser;
 use crate::router::state::AppState;
-use crate::service::dtos::{UserModuleDescResponse, UserModuleResponse, VecInto};
+use crate::service::dtos::{
+    UserAssignmentResponse, UserModuleDescResponse, UserModuleResponse, VecInto,
+};
 use crate::service::ObfuscatedStr;
 
 pub fn router() -> Router<AppState> {
@@ -15,6 +17,25 @@ pub fn router() -> Router<AppState> {
         .route("/", get(list_modules))
         .route("/redeem", get(redeem_module))
         .route("/:module_id", get(get_module))
+        .route("/:module_id/assignment/:assignment_id", get(get_assignment))
+}
+
+async fn get_assignment(
+    AuthenticatedUser(user): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((module_id, assignment_id)): Path<(String, String)>,
+) -> Result<Json<UserAssignmentResponse>, StatusCode> {
+    let assignment = state
+        .service
+        .repo
+        .get_assignment(&user, &module_id, &assignment_id)
+        .await
+        .map_err(|err| {
+            error!("get_assignment {err:#?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    Ok(Json(assignment.into()))
 }
 
 async fn get_module(

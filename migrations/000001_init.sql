@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- DROP TABLE IF EXISTS "module" CASCADE;
 -- DROP TABLE IF EXISTS "user_module";
 -- DROP TABLE IF EXISTS "grading_task";
--- DROP TABLE IF EXISTS "user_assignment";
+DROP TABLE IF EXISTS "user_assignment";
 -- DROP TABLE IF EXISTS "assignment";
 
 CREATE TABLE IF NOT EXISTS "user" (
@@ -93,7 +93,8 @@ CREATE TABLE IF NOT EXISTS "user_assignment" (
   user_id integer NOT NULL,
   assignment_id integer NOT NULL,
   repository_linked boolean NOT NULL DEFAULT FALSE,
-  grade NUMERIC(4, 2) NOT NULL DEFAULT 0,
+  normalized_grade NUMERIC(4, 2) NOT NULL DEFAULT 0,
+  grades_history JSONB DEFAULT '[]'::jsonb,
   UNIQUE (user_id, assignment_id),
   CONSTRAINT fk_user_assignment_user_id
         FOREIGN KEY(user_id)
