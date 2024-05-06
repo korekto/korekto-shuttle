@@ -1,6 +1,6 @@
 use crate::entities;
 use crate::entities::{
-    Assignment, Details, EmbeddedAssignmentDesc, InstantGrade, Module, ModuleDesc,
+    Assignment, Details, EmbeddedAssignmentDesc, GradingTask, InstantGrade, Module, ModuleDesc,
     UnparseableWebhook, UserAssignment, UserAssignmentDesc, UserModule, UserModuleDesc,
 };
 use rust_decimal::Decimal;
@@ -502,6 +502,33 @@ impl From<NewGradeDetailRequest> for Details {
             grade: value.grade,
             max_grade: value.max_grade,
             messages: value.messages,
+        }
+    }
+}
+
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct GradingTaskResponse {
+    module_uuid: String,
+    assignment_uuid: String,
+    provider_login: String,
+    status: String,
+    #[serde(with = "dto_time_serde")]
+    created_at: OffsetDateTime,
+    #[serde(with = "dto_time_serde")]
+    updated_at: OffsetDateTime,
+    repository_name: String,
+}
+
+impl From<GradingTask> for GradingTaskResponse {
+    fn from(value: GradingTask) -> Self {
+        Self {
+            module_uuid: value.module_uuid,
+            assignment_uuid: value.assignment_uuid,
+            provider_login: value.provider_login,
+            status: value.status,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+            repository_name: value.repository_name,
         }
     }
 }

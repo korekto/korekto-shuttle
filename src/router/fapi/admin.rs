@@ -9,7 +9,7 @@ use tracing::error;
 use validator::Validate;
 
 use crate::service::dtos::{
-    Page, PaginationQuery, UnparseableWebhookResponse, UserForAdminResponse,
+    GradingTaskResponse, Page, PaginationQuery, UnparseableWebhookResponse, UserForAdminResponse,
 };
 use crate::{
     entities::Table,
@@ -25,6 +25,7 @@ pub fn router() -> Router<AppState> {
             "/unparseable_webhooks",
             get(get_unparseable_webhooks).delete(delete_unparseable_webhooks),
         )
+        .route("/grading_tasks", get(get_grading_tasks))
 }
 
 async fn get_tables(
@@ -119,4 +120,21 @@ async fn delete_unparseable_webhooks(
         .await
         .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))?;
     Ok(())
+}
+
+async fn get_grading_tasks(
+    _user: AdminUser,
+    State(state): State<AppState>,
+    Query(pagination): Query<PaginationQuery>,
+) -> Result<Json<Page<GradingTaskResponse>>, (StatusCode, Json<String>)> {
+    pagination
+        .validate()
+        .map_err(|err| (StatusCode::BAD_REQUEST, Json(format!("{err}"))))?;
+    Ok(Json(
+        state
+            .service
+            .get_grading_tasks(&pagination)
+            .await
+            .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))?,
+    ))
 }
