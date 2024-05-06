@@ -222,6 +222,12 @@ pub struct UnparseableWebhook {
     pub total_count: i32,
 }
 
+impl crate::service::trackable::WithTotalCount for UnparseableWebhook {
+    fn total_count(&self) -> i32 {
+        self.total_count
+    }
+}
+
 #[derive(sqlx::FromRow, Debug, Clone)]
 pub struct UserModule {
     pub id: i32,
@@ -291,4 +297,22 @@ pub struct Details {
     pub grade: f32,
     pub max_grade: Option<f32>,
     pub messages: Vec<String>,
+}
+
+#[derive(sqlx::FromRow, Debug, Clone)]
+pub struct GradingTask {
+    pub module_uuid: String,
+    pub assignment_uuid: String,
+    pub provider_login: String,
+    pub status: String,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+    pub repository_name: String,
+    total_count: i32,
+}
+
+impl crate::service::trackable::WithTotalCount for GradingTask {
+    fn total_count(&self) -> i32 {
+        self.total_count
+    }
 }

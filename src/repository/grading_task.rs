@@ -1,5 +1,6 @@
-use crate::entities::NewGradingTask;
+use crate::entities::{GradingTask, NewGradingTask};
 use crate::repository::Repository;
+use anyhow::anyhow;
 use time::OffsetDateTime;
 
 impl Repository {
@@ -78,5 +79,40 @@ impl Repository {
             .bind(user_uuid)
             .fetch_one(&self.pool)
             .await?)
+    }
+
+    pub async fn get_grading_tasks(
+        &self,
+        page: i32,
+        per_page: i32,
+    ) -> anyhow::Result<Vec<GradingTask>> {
+        const QUERY: &str = "\
+            SELECT
+              m.uuid::varchar as module_uuid,
+              a.uuid::varchar as assignment_uuid,
+              gt.user_provider_login as provider_login,
+              gt.status,
+              gt.created_at,
+              gt.updated_at,
+              a.repository_name,
+              (count(*) OVER ())::integer as total_count
+            FROM grading_task gt, user_assignment ua, assignment a, module m
+            WHERE
+              gt.user_assignment_id = ua.id
+              AND ua.assignment_id = a.id
+              AND a.module_id = m.id
+            ORDER BY created_at DESC
+            LIMIT $1
+            OFFSET $2
+        ";
+
+        let offset = if page == 1 { 0 } else { (page - 1) * per_page };
+
+        sqlx::query_as::<_, GradingTask>(QUERY)
+            .bind(per_page)
+            .bind(offset)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|err| anyhow!("get_unparseable_webhooks({page}, {per_page}): {:?}", &err))
     }
 }

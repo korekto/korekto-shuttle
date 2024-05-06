@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS "grading_task" (
   repository VARCHAR NOT NULL,
   grader_repository VARCHAR NOT NULL,
   latest_grading TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ NOT NULL,
   UNIQUE (user_assignment_id, user_provider_login, status),
   CONSTRAINT fk_grading_task_user_assignment_id
         FOREIGN KEY(user_assignment_id)
