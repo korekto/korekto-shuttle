@@ -186,11 +186,17 @@ pub struct Assignment {
     pub grader_run_url: String,
 }
 
-pub struct NewGradingTask {
-    pub user_assignment_id: i32,
-    pub user_provider_name: String,
-    pub repository: String,
-    pub grader_repository: String,
+pub enum NewGradingTask {
+    Internal {
+        user_assignment_id: i32,
+        user_provider_name: String,
+        repository: String,
+        grader_repository: String,
+    },
+    External {
+        user_assignment_uuid: String,
+        user_uuid: String,
+    },
 }
 
 #[derive(sqlx::FromRow, Debug, Clone, PartialEq)]

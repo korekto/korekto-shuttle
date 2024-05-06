@@ -1,6 +1,11 @@
+use crate::entities::NewGradingTask;
 use axum::extract::{Path, Query};
 use axum::response::Redirect;
-use axum::{extract::State, routing::get, Json, Router};
+use axum::{
+    extract::State,
+    routing::{get, post},
+    Json, Router,
+};
 use axum_extra::either::Either;
 use http::StatusCode;
 use tracing::{error, info, warn};
@@ -18,6 +23,10 @@ pub fn router() -> Router<AppState> {
         .route("/redeem", get(redeem_module))
         .route("/:module_id", get(get_module))
         .route("/:module_id/assignment/:assignment_id", get(get_assignment))
+        .route(
+            "/:module_id/assignment/:assignment_id/trigger-grading",
+            post(trigger_grading),
+        )
 }
 
 async fn get_assignment(
@@ -107,4 +116,26 @@ async fn redeem_module(
 struct RedeemQuery {
     key: ObfuscatedStr,
     redirect: Option<bool>,
+}
+
+async fn trigger_grading(
+    AuthenticatedUser(user): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((module_id, assignment_id)): Path<(String, String)>,
+) -> Result<(), StatusCode> {
+    state
+        .service
+        .repo
+        .upsert_grading_task(&NewGradingTask::External {
+            user_assignment_uuid: assignment_id.clone(),
+            user_uuid: user.uuid.clone(),
+        })
+        .await
+        .map_err(|err| {
+            warn!(
+                "Unable to trigger grading of module: {module_id}, assignment: {assignment_id}, for user {user}: {err}"
+            );
+            StatusCode::FORBIDDEN
+        })?;
+    Ok(())
 }

@@ -53,18 +53,18 @@ impl Service {
 
     async fn link_repos(
         &self,
-        user_provider_name: &str,
+        user_provider_login: &str,
         repo_names: Vec<&str>,
     ) -> anyhow::Result<()> {
         let retained_repos = self
             .repo
-            .upsert_user_assignments(user_provider_name, &repo_names, true)
+            .upsert_user_assignments(user_provider_login, &repo_names, true)
             .await?;
         for retained_assignment in retained_repos {
             self.repo
-                .upsert_grading_task(&NewGradingTask {
+                .upsert_grading_task(&NewGradingTask::Internal {
                     user_assignment_id: retained_assignment.id,
-                    user_provider_name: user_provider_name.to_string(),
+                    user_provider_name: user_provider_login.to_string(),
                     repository: retained_assignment.repository_name,
                     grader_repository: retained_assignment.grader_url,
                 })

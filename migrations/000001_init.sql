@@ -6,7 +6,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- DROP TABLE IF EXISTS "module" CASCADE;
 -- DROP TABLE IF EXISTS "user_module";
--- DROP TABLE IF EXISTS "grading_task";
+DROP TABLE IF EXISTS "grading_task";
 DROP TABLE IF EXISTS "user_assignment";
 -- DROP TABLE IF EXISTS "assignment";
 
@@ -108,12 +108,14 @@ CREATE TABLE IF NOT EXISTS "user_assignment" (
 
 CREATE TABLE IF NOT EXISTS "grading_task" (
   user_assignment_id integer NOT NULL,
-  user_provider_name VARCHAR NOT NULL,
+  user_provider_login VARCHAR NOT NULL,
+  status VARCHAR NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   repository VARCHAR NOT NULL,
   grader_repository VARCHAR NOT NULL,
   latest_grading TIMESTAMPTZ,
-  latest_code_update TIMESTAMPTZ,
-  UNIQUE (user_assignment_id, user_provider_name),
+  updated_at TIMESTAMPTZ,
+  UNIQUE (user_assignment_id, user_provider_login, status),
   CONSTRAINT fk_grading_task_user_assignment_id
         FOREIGN KEY(user_assignment_id)
         REFERENCES user_assignment(id)
