@@ -2,7 +2,7 @@ use octocrab::Octocrab;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone)]
-pub struct GitHubClient(Octocrab);
+pub struct GitHubClient(pub Octocrab);
 
 // This is really no the good approach, waiting for async 2023
 // stabilization to have a proper trait for new methods on Octocrab

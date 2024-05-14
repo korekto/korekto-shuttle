@@ -51,7 +51,7 @@ impl Service {
         Ok(())
     }
 
-    async fn link_repos(
+    pub async fn link_repos(
         &self,
         user_provider_login: &str,
         repo_names: Vec<&str>,

@@ -94,11 +94,12 @@ impl Repository {
               COALESCE(ua.repository_linked, FALSE) as repo_linked,
               u.provider_login as user_provider_login,
               COALESCE(ua.normalized_grade, 0)::real as normalized_grade,
-              ua.grades_history
+              COALESCE(ua.grades_history, '[]'::jsonb) as grades_history
             FROM assignment a
             INNER JOIN module m ON m.id = a.module_id
+            INNER JOIN user_module um ON um.module_id = m.id
+            INNER JOIN \"user\" u ON u.id = um.user_id
             LEFT JOIN user_assignment ua ON ua.assignment_id = a.id
-            LEFT JOIN \"user\" u ON u.id = ua.user_id
             WHERE u.id = $1
               AND m.uuid::varchar = $2
               AND a.uuid::varchar = $3
