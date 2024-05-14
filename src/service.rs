@@ -88,6 +88,14 @@ impl<'de> Deserialize<'de> for ObfuscatedStr {
     }
 }
 
+#[derive(Debug)]
+pub enum SyncError {
+    AssignmentNotFound,
+    UserInstallationUnknown,
+    BadInstallationId,
+    Unknown(anyhow::Error),
+}
+
 #[cfg(test)]
 mod tests {
     use crate::service::ObfuscatedStr;

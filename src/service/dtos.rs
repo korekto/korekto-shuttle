@@ -83,7 +83,7 @@ pub struct UserModuleDescResponse {
     pub linked_repo_count: i32,
     pub assignment_count: i32,
     pub grade: Decimal,
-    //#[serde(with = "time_serde")]
+    #[serde(with = "dto_time_serde::option")]
     pub latest_update: Option<OffsetDateTime>,
 }
 
@@ -508,8 +508,8 @@ impl From<NewGradeDetailRequest> for Details {
 
 #[derive(serde::Serialize, Debug, Clone)]
 pub struct GradingTaskResponse {
-    module_uuid: String,
-    assignment_uuid: String,
+    module_id: String,
+    assignment_id: String,
     provider_login: String,
     status: String,
     #[serde(with = "dto_time_serde")]
@@ -522,8 +522,8 @@ pub struct GradingTaskResponse {
 impl From<GradingTask> for GradingTaskResponse {
     fn from(value: GradingTask) -> Self {
         Self {
-            module_uuid: value.module_uuid,
-            assignment_uuid: value.assignment_uuid,
+            module_id: value.module_uuid,
+            assignment_id: value.assignment_uuid,
             provider_login: value.provider_login,
             status: value.status,
             created_at: value.created_at,

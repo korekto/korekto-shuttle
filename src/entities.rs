@@ -194,7 +194,7 @@ pub enum NewGradingTask {
         grader_repository: String,
     },
     External {
-        user_assignment_uuid: String,
+        assignment_uuid: String,
         user_uuid: String,
     },
 }

@@ -15,7 +15,7 @@ use crate::router::state::AppState;
 use crate::service::dtos::{
     UserAssignmentResponse, UserModuleDescResponse, UserModuleResponse, VecInto,
 };
-use crate::service::ObfuscatedStr;
+use crate::service::{ObfuscatedStr, SyncError};
 
 pub fn router() -> Router<AppState> {
     Router::new()
@@ -26,6 +26,10 @@ pub fn router() -> Router<AppState> {
         .route(
             "/:module_id/assignment/:assignment_id/trigger-grading",
             post(trigger_grading),
+        )
+        .route(
+            "/:module_id/assignment/:assignment_id/sync-repo",
+            post(sync_repo),
         )
 }
 
@@ -127,7 +131,7 @@ async fn trigger_grading(
         .service
         .repo
         .upsert_grading_task(&NewGradingTask::External {
-            user_assignment_uuid: assignment_id.clone(),
+            assignment_uuid: assignment_id.clone(),
             user_uuid: user.uuid.clone(),
         })
         .await
@@ -138,4 +142,25 @@ async fn trigger_grading(
             StatusCode::FORBIDDEN
         })?;
     Ok(())
+}
+
+async fn sync_repo(
+    AuthenticatedUser(user): AuthenticatedUser,
+    State(state): State<AppState>,
+    Path((module_id, assignment_id)): Path<(String, String)>,
+) -> Result<(), StatusCode> {
+    state
+        .service
+        .sync_repo(&user, &module_id, &assignment_id, &state.github_clients)
+        .await
+        .map_err(|err| {
+            warn!(
+                "Unable to sync repo for module: {module_id}, assignment: {assignment_id}, for user {user}: {err:?}"
+            );
+            match err {
+                SyncError::AssignmentNotFound => StatusCode::NOT_FOUND,
+                SyncError::UserInstallationUnknown => StatusCode::NOT_IMPLEMENTED,
+                SyncError::BadInstallationId | SyncError::Unknown(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            }
+        })
 }

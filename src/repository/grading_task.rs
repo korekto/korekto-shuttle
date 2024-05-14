@@ -24,10 +24,10 @@ impl Repository {
                 .await
             }
             NewGradingTask::External {
-                user_assignment_uuid,
+                assignment_uuid,
                 user_uuid,
             } => {
-                self.upsert_grading_task_external(user_assignment_uuid, user_uuid)
+                self.upsert_grading_task_external(assignment_uuid, user_uuid)
                     .await
             }
         }
@@ -58,24 +58,24 @@ impl Repository {
 
     async fn upsert_grading_task_external(
         &self,
-        user_assignment_uuid: &str,
+        assignment_uuid: &str,
         user_uuid: &str,
     ) -> anyhow::Result<OffsetDateTime> {
         const QUERY: &str = "INSERT INTO grading_task
           (user_assignment_id, user_provider_login, status, repository, grader_repository, updated_at)
         SELECT ua.id, u.provider_login, 'queued', a.repository_name, a.grader_url, NOW()
-        FROM user_assignment ua, \"user\" u, assignment a,
+        FROM user_assignment ua, \"user\" u, assignment a
         WHERE
           ua.user_id = u.id
-          AND ua.assignment_id = a.id,
-          AND ua.uuid::varchar = $1
+          AND ua.assignment_id = a.id
+          AND a.uuid::varchar = $1
           AND u.uuid::varchar = $2
         ON CONFLICT (user_assignment_id, user_provider_login, status) DO UPDATE
-        SET updated_at= NOW()
+        SET updated_at = NOW()
         RETURNING updated_at";
 
         Ok(sqlx::query_scalar(QUERY)
-            .bind(user_assignment_uuid)
+            .bind(assignment_uuid)
             .bind(user_uuid)
             .fetch_one(&self.pool)
             .await?)
