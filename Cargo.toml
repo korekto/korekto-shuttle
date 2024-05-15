@@ -45,6 +45,7 @@ sha2 = "0.10.8"
 validator = { version = "0.18", features = ["derive"] }
 const_format = "0.2.32"
 rust_decimal = "1.35.0"
+envy = "0.4.2"
 
 derive_builder = { version = "0.20.0", optional = true }
 
