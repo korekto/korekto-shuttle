@@ -17,8 +17,8 @@ mod spa;
 pub mod state;
 mod webhook;
 
-pub fn router(state: AppState) -> shuttle_axum::AxumService {
-    let router = Router::new()
+pub fn router(state: AppState) -> Router {
+    Router::new()
         .route("/", get(spa::welcome_handler))
         .nest("/auth", auth::router())
         .nest("/fapi", fapi::router())
@@ -32,9 +32,7 @@ pub fn router(state: AppState) -> shuttle_axum::AxumService {
                 .timeout(Duration::from_secs(10)),
         )
         .fallback(fallback)
-        .with_state(state);
-
-    router.into()
+        .with_state(state)
 }
 
 #[allow(clippy::unused_async)]
