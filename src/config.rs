@@ -12,6 +12,13 @@ pub struct Config {
     pub github_app_private_key: String,
     pub github_app_webhook_secret: String,
     pub github_client_cache_size: NonZeroUsize,
+    #[serde(default = "default_scheduler_interval_in_secs")]
+    pub scheduler_interval_in_secs: NonZeroUsize,
+}
+
+fn default_scheduler_interval_in_secs() -> NonZeroUsize {
+    #[allow(clippy::expect_used)]
+    NonZeroUsize::new(15).expect("Infallible !")
 }
 
 impl TryFrom<SecretStore> for Config {

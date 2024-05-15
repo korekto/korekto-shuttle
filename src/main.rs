@@ -1,4 +1,5 @@
-use korekto::{config::Config, router, router::state::AppState};
+use korekto::shuttle::{KorektoService, KorektoServiceResult};
+use korekto::{config::Config, router, router::state::AppState, scheduler::Scheduler};
 use shuttle_runtime::SecretStore;
 use sqlx::PgPool;
 
@@ -7,14 +8,15 @@ use sqlx::PgPool;
 async fn main(
     #[shuttle_runtime::Secrets] secret_store: SecretStore,
     #[shuttle_shared_db::Postgres] pool: PgPool,
-) -> shuttle_axum::ShuttleAxum {
+) -> KorektoServiceResult {
     let config = Config::try_from(secret_store)?;
     let state = AppState::new(&config, pool)?;
 
     state.service.repo.reset_migrations().await?;
     state.service.repo.run_migrations().await?;
 
-    let router = router::router(state);
+    let router = router::router(state.clone());
+    let scheduler = Scheduler::new(state);
 
-    Ok(router)
+    KorektoService::new(router, scheduler)
 }
