@@ -112,7 +112,7 @@ impl Repository {
                 m.stop,
                 m.source_url,
                 MAX(ma.updated_at) as latest_update,
-                coalesce(json_agg(to_jsonb(ma.*) ORDER BY ma.id asc), '[]'::json) AS assignments
+                coalesce(json_agg(to_jsonb(ma.*) ORDER BY ma.id asc) FILTER (WHERE ma.id IS NOT NULL), '[]'::json) AS assignments
             FROM \"module\" m
             INNER JOIN user_module um ON um.module_id = m.id
             LEFT JOIN matching_assignment ma ON ma.module_id = m.id

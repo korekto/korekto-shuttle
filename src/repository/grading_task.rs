@@ -115,4 +115,41 @@ impl Repository {
             .await
             .map_err(|err| anyhow!("get_unparseable_webhooks({page}, {per_page}): {:?}", &err))
     }
+
+    pub async fn get_grading_tasks_to_execute(
+        &self,
+        min_execution_interval_in_secs: i32,
+        max_tasks: i32,
+    ) -> anyhow::Result<Vec<GradingTask>> {
+        const QUERY: &str = "\
+            WITH max_tasks as (
+              SELECT
+                m.uuid::varchar as module_uuid,
+                a.uuid::varchar as assignment_uuid,
+                gt.user_provider_login as provider_login,
+                gt.status,
+                gt.created_at,
+                gt.updated_at,
+                a.repository_name,
+                0 as total_count
+              FROM grading_task gt, user_assignment ua, assignment a, module m
+              WHERE gt.user_assignment_id = ua.id
+              AND ua.assignment_id = a.id
+              AND a.module_id = m.id
+              AND (ua.graded_last_at IS NULL OR ua.graded_last_at < NOW() - interval '$1 seconds')
+              AND gt.status IN ('queued', 'ordered', 'running')
+              ORDER BY gt.created_at DESC
+              LIMIT $2
+            )
+            SELECT * FROM max_tasks
+            WHERE status = 'queued'
+        ";
+
+        sqlx::query_as::<_, GradingTask>(QUERY)
+            .bind(min_execution_interval_in_secs)
+            .bind(max_tasks)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|err| anyhow!("get_grading_tasks_to_execute(min_execution_interval_in_secs={min_execution_interval_in_secs}, max_tasks={max_tasks}): {err:?}"))
+    }
 }

@@ -2,6 +2,8 @@ use crate::entities::{InstantGrade, User};
 use crate::github::client_cache::ClientCache;
 use crate::service::dtos::{NewGradeRequest, VecInto};
 use crate::service::{Service, SyncError};
+use http::StatusCode;
+use octocrab::Error;
 use time::OffsetDateTime;
 use tracing::info;
 
@@ -61,18 +63,26 @@ impl Service {
                 .repos(&user.provider_login, &assignment.repository_name)
                 .get()
                 .await;
-            match repo_result {
+
+            let error: Option<String> = match repo_result {
                 Ok(_) => {
                     self.link_repos(&user.provider_login, vec![&assignment.repository_name])
                         .await
                         .map_err(SyncError::Unknown)?;
+                    None
                 }
-                Err(err) => {
-                    info!(
-                        "Syncing repo {}/{} failed: {err:?}",
-                        &user.provider_login, &assignment.repository_name
-                    );
+                Err(Error::GitHub { source, .. }, ..)
+                    if source.status_code == StatusCode::NOT_FOUND =>
+                {
+                    Some(source.message)
                 }
+                Err(err) => Some(format!("{err:?}")),
+            };
+            if let Some(message) = error {
+                info!(
+                    "Syncing repo {}/{} failed: {message}",
+                    &user.provider_login, &assignment.repository_name
+                );
             }
         }
 
