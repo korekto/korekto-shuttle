@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS "user_assignment" (
   repository_linked boolean NOT NULL DEFAULT FALSE,
   normalized_grade NUMERIC(4, 2) NOT NULL DEFAULT 0,
   grades_history JSONB DEFAULT '[]'::jsonb,
+  graded_last_at TIMESTAMPTZ,
   UNIQUE (user_id, assignment_id),
   CONSTRAINT fk_user_assignment_user_id
         FOREIGN KEY(user_id)

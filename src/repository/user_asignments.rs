@@ -49,7 +49,8 @@ impl Repository {
             SET
               updated_at = $3,
               normalized_grade = GREATEST($4::NUMERIC(4, 2), normalized_grade),
-              grades_history = grades_history || $5
+              grades_history = grades_history || $5,
+              graded_last_at = NOW()
             FROM assignment a, \"user\" u
             WHERE
               ua.assignment_id = a.id
