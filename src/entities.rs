@@ -311,6 +311,21 @@ pub struct GradingTask {
     total_count: i32,
 }
 
+#[derive(sqlx::FromRow, Debug, Clone)]
+pub struct GitHubGradingTask {
+    pub id: i32,
+    pub uuid: String,
+    pub user_assignment_uuid: String,
+    pub provider_login: String,
+    pub status: String,
+    pub version: i32,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+    pub repository_name: String,
+    pub installation_id: String,
+    pub grader_url: String,
+}
+
 impl crate::service::trackable::WithTotalCount for GradingTask {
     fn total_count(&self) -> i32 {
         self.total_count

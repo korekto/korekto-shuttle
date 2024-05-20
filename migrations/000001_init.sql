@@ -108,6 +108,8 @@ CREATE TABLE IF NOT EXISTS "user_assignment" (
 );
 
 CREATE TABLE IF NOT EXISTS "grading_task" (
+  id SERIAL PRIMARY KEY,
+  uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   user_assignment_id integer NOT NULL,
   user_provider_login VARCHAR NOT NULL,
   status VARCHAR NOT NULL,
@@ -116,6 +118,8 @@ CREATE TABLE IF NOT EXISTS "grading_task" (
   grader_repository VARCHAR NOT NULL,
   latest_grading TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL,
+  version integer NOT NULL DEFAULT 1,
+  message VARCHAR,
   UNIQUE (user_assignment_id, user_provider_login, status),
   CONSTRAINT fk_grading_task_user_assignment_id
         FOREIGN KEY(user_assignment_id)
