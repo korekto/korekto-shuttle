@@ -6,6 +6,7 @@ use crate::repository::Repository;
 
 pub mod dtos;
 mod find_user_by_id;
+mod github;
 mod schedule_grading;
 pub(crate) mod trackable;
 mod user_assignments;

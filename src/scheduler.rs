@@ -25,16 +25,16 @@ impl Scheduler {
     }
 
     pub async fn tick(&self) -> anyhow::Result<()> {
-        let tasks = self
+        let task_count = self
             .state
             .service
-            .repo
-            .get_grading_tasks_to_execute(
+            .launch_grading_tasks(
                 self.state.config.min_grading_interval_in_secs(),
                 self.state.config.max_parallel_gradings(),
+                &self.state.gh_runner,
             )
             .await?;
-        info!("[scheduler] Ticking, found {} tasks to run", tasks.len());
+        info!("[scheduler] Ticking, found {task_count} tasks to run");
         Ok(())
     }
 }
