@@ -3,14 +3,21 @@ use crate::router::state::AppState;
 use crate::string_header;
 use anyhow::anyhow;
 use axum::extract::State;
-use axum::{routing::post, Router};
+use axum::{routing::post, Json, Router};
 use axum_extra::TypedHeader;
+use headers::authorization::Bearer;
+use headers::Authorization;
+use http::StatusCode;
+use serde::Deserialize;
+use tracing::{error, info, warn};
 
 string_header!(XGithubEvent, X_GITHUB_EVENT_HEADER, "x-github-event");
 string_header!(XHubSignature, X_HUB_SIGNATURE, "x-hub-signature-256");
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/github", post(on_github_event))
+    Router::new()
+        .route("/github", post(on_github_event))
+        .route("/github/runner", post(on_github_runner_event))
 }
 
 #[allow(clippy::unused_async)]
@@ -39,11 +46,25 @@ async fn on_github_event(
                     .insert_unparseable_webhook("github", &event_type, &payload, &err.to_string())
                     .await
                 {
-                    tracing::warn!("Fail to save unparseable webhook: {err:?}");
+                    warn!("Fail to save unparseable webhook: {err:?}");
                 }
             }
         }
     }
+}
+
+#[allow(clippy::unused_async)]
+async fn on_github_runner_event(
+    TypedHeader(Authorization(bearer)): TypedHeader<Authorization<Bearer>>,
+    State(state): State<AppState>,
+    Json(payload): Json<RunnerPayload>,
+) -> Result<(), (StatusCode, String)> {
+    state.gh_runner.verify_jwt(bearer.token()).map_err(|err| {
+        error!("Unprocessable runner event: {err:?}");
+        (StatusCode::UNAUTHORIZED, format!("{err:?}"))
+    })?;
+    info!("Received runner event: {payload:?}");
+    Ok(())
 }
 
 pub fn is_signature_valid(payload: &str, secret: &str, signature: &str) -> anyhow::Result<()> {
@@ -73,4 +94,38 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
         .step_by(2)
         .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
         .collect()
+}
+
+#[derive(Deserialize, Debug)]
+struct RunnerPayload {
+    pub status: RunnerStatus,
+    pub student_login: String,
+    pub grader_repo: String,
+    pub task_id: String,
+    pub full_log_url: String,
+    pub details: Option<RunnerGradeDetails>,
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+enum RunnerStatus {
+    Started,
+    Completed,
+}
+
+#[derive(Deserialize, Debug)]
+struct RunnerGradeDetails {
+    pub grade: f32,
+    #[serde(rename = "maxGrade")]
+    pub max_grade: f32,
+    pub parts: Vec<RunnerGradePart>,
+}
+
+#[derive(Deserialize, Debug)]
+struct RunnerGradePart {
+    pub id: String,
+    pub grade: f32,
+    #[serde(rename = "maxGrade")]
+    pub max_grade: Option<f32>,
+    pub comments: Vec<String>,
 }

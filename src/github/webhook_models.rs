@@ -1,4 +1,6 @@
 use serde::Deserialize;
+use time::serde::rfc3339 as gh_webhook_time_serde;
+use time::OffsetDateTime;
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(tag = "event", content = "payload", rename_all = "snake_case")]
@@ -7,6 +9,42 @@ pub enum GhWebhookEvent {
     Installation(InstallationModification),
     Push(Push),
     Repository(RepositoryModification),
+    WorkflowJob(WorkflowJobEvent),
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+pub struct WorkflowJobEvent {
+    pub workflow_job: WorkflowJob,
+    pub repository: RepositoryWithOwner,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+pub struct WorkflowJob {
+    pub html_url: String,
+    pub status: WorkflowJobStatus,
+    pub conclusion: Option<WorkflowJobConclusion>,
+    #[serde(with = "gh_webhook_time_serde")]
+    pub created_at: OffsetDateTime,
+    #[serde(with = "gh_webhook_time_serde::option")]
+    pub completed_at: Option<OffsetDateTime>,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowJobStatus {
+    Queued,
+    InProgress,
+    Completed,
+    Waiting,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WorkflowJobConclusion {
+    Success,
+    Failure,
+    Skipped,
+    Cancelled,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
@@ -26,7 +64,7 @@ pub struct PushRepository {
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct InstallationRepositories {
-    pub action: Action,
+    pub action: RepositoryAction,
     pub installation: Installation,
     pub repository_selection: RepositorySelection,
     pub repositories_added: Vec<Repository>,
@@ -36,7 +74,7 @@ pub struct InstallationRepositories {
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct InstallationModification {
-    pub action: Action,
+    pub action: RepositoryAction,
     pub installation: Installation,
     pub repositories: Vec<Repository>,
     pub sender: Account,
@@ -44,13 +82,13 @@ pub struct InstallationModification {
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct RepositoryModification {
-    pub action: Action,
+    pub action: RepositoryAction,
     pub repository: RepositoryWithOwner,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
-pub enum Action {
+pub enum RepositoryAction {
     Added,
     Created,
     Removed,
@@ -111,12 +149,14 @@ pub fn parse_event(event_type: &str, payload: &str) -> serde_json::Result<GhWebh
 #[cfg(test)]
 mod tests {
     use crate::github::webhook_models::{
-        parse_event, Account, Action, GhWebhookEvent, Installation, InstallationModification,
-        InstallationRepositories, Push, Repository, RepositoryModification, RepositorySelection,
-        RepositoryWithOwner, TargetType,
+        parse_event, Account, GhWebhookEvent, Installation, InstallationModification,
+        InstallationRepositories, Push, Repository, RepositoryAction, RepositoryModification,
+        RepositorySelection, RepositoryWithOwner, TargetType, WorkflowJob, WorkflowJobEvent,
+        WorkflowJobStatus,
     };
     use pretty_assertions::assert_eq;
     use std::fs;
+    use time::macros::datetime;
 
     #[test]
     #[cfg_attr(not(feature = "tests-with-resources"), ignore)]
@@ -127,7 +167,7 @@ mod tests {
         assert_eq!(
             result,
             GhWebhookEvent::Installation(InstallationModification {
-                action: Action::Created,
+                action: RepositoryAction::Created,
                 installation: Installation {
                     id: 41266767,
                     account: Account {
@@ -166,7 +206,7 @@ mod tests {
         assert_eq!(
             result,
             GhWebhookEvent::InstallationRepositories(InstallationRepositories {
-                action: Action::Added,
+                action: RepositoryAction::Added,
                 installation: Installation {
                     id: 41266767,
                     account: Account {
@@ -223,13 +263,41 @@ mod tests {
         assert_eq!(
             result,
             GhWebhookEvent::Repository(RepositoryModification {
-                action: Action::Created,
+                action: RepositoryAction::Created,
                 repository: RepositoryWithOwner {
                     name: "tutu".to_string(),
                     full_name: "ledoyen/tutu".to_string(),
                     private: true,
                     owner: Account {
                         login: "ledoyen".to_string()
+                    },
+                },
+            })
+        );
+    }
+
+    #[test]
+    #[cfg_attr(not(feature = "tests-with-resources"), ignore)]
+    fn parse_workflow_job_event() {
+        let payload = fs::read_to_string("test_files/webhook_workflow_job_payload.json").unwrap();
+        let result = parse_event("workflow_job", &payload).unwrap();
+
+        assert_eq!(
+            result,
+            GhWebhookEvent::WorkflowJob(WorkflowJobEvent {
+                workflow_job: WorkflowJob {
+                    html_url: "https://github.com/lernejo/korekto-runner/actions/runs/9160150850/job/25182159656".to_string(),
+                    status: WorkflowJobStatus::Queued,
+                    conclusion: None,
+                    created_at: datetime!(2024-05-20 14:19:46 UTC),
+                    completed_at: None,
+                },
+                repository: RepositoryWithOwner {
+                    name: "korekto-runner".to_string(),
+                    full_name: "lernejo/korekto-runner".to_string(),
+                    private: false,
+                    owner: Account {
+                        login: "lernejo".to_string()
                     },
                 },
             })

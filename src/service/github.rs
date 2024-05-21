@@ -45,7 +45,7 @@ impl Service {
             .await?;
         }
 
-        //transaction.commit().await?;
+        transaction.commit().await?;
 
         Ok(queued_tasks.len())
     }
