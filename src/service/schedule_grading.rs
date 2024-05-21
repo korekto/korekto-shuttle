@@ -7,7 +7,7 @@ impl Service {
     pub async fn on_webhook(&self, event: GhWebhookEvent) -> anyhow::Result<()> {
         match event {
             GhWebhookEvent::InstallationRepositories(ir) => {
-                if ir.action == crate::github::webhook_models::Action::Added {
+                if ir.action == crate::github::webhook_models::RepositoryAction::Added {
                     let repo_names = ir
                         .repositories_added
                         .iter()
@@ -23,7 +23,7 @@ impl Service {
                 }
             }
             GhWebhookEvent::Installation(i) => {
-                if i.action == crate::github::webhook_models::Action::Created {
+                if i.action == crate::github::webhook_models::RepositoryAction::Created {
                     let repo_names = i
                         .repositories
                         .iter()
@@ -40,13 +40,15 @@ impl Service {
                     .await?;
             }
             GhWebhookEvent::Repository(r) => {
-                if r.action == crate::github::webhook_models::Action::Created {
+                if r.action == crate::github::webhook_models::RepositoryAction::Created {
                     self.link_repos(&r.repository.owner.login, vec![&r.repository.name])
                         .await?;
                 } else {
                     warn!("Unhandled webhook Repository action: {:?}", r.action);
                 }
             }
+            // Ignore these events as they carry no correlation information about the student or the assignment
+            GhWebhookEvent::WorkflowJob(_) => {}
         };
         Ok(())
     }

@@ -46,11 +46,17 @@ rund:
 shuttle-restart:
   cargo shuttle project restart --idle-minutes 0
 
-start-smee:
-  docker run --name smee-client -d deltaprojects/smee-client -u https://smee.io/WPgvb1aTMNPsas -t http://host.docker.internal:8000/webhook/github
+install-smee:
+  npm install -g smee-client
 
-stop-smee:
-  docker rm $(docker stop smee-client)
+start-smee-gh:
+  smee -u https://smee.io/WPgvb1aTMNPsas -t http://127.0.0.1:8000/webhook/github -p 3000
+
+start-smee-runner:
+  smee -u https://smee.io/hyZtaQlRMpJ1pEt -t http://127.0.0.1:8000/webhook/github/runner -p 3001
+
+stop-smee-runner:
+  docker rm $(docker stop smee-client-runner)
 
 start-pg:
   docker run --name it-postgres -p 5433:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_DB=postgres postgres:14-alpine

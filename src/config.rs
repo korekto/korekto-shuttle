@@ -19,6 +19,8 @@ pub struct Config {
     #[serde(default = "default_github_runner_workflow_id")]
     pub github_runner_workflow_id: String,
     pub github_runner_installation_id: u64,
+    #[serde(default)]
+    pub github_runner_callback_url_override: Option<String>,
     #[serde(default = "default_scheduler_interval_in_secs")]
     pub scheduler_interval_in_secs: NonZeroU32,
     #[serde(default = "default_min_grading_interval_in_secs")]

@@ -10,7 +10,7 @@ async fn main(
     #[shuttle_shared_db::Postgres] pool: PgPool,
 ) -> KorektoServiceResult {
     let config = Config::try_from(secret_store)?;
-    let state = AppState::new(&config, pool)?;
+    let state = AppState::new(&config, pool).await?;
 
     state.service.repo.reset_migrations().await?;
     state.service.repo.run_migrations().await?;

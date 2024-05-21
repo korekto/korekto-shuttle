@@ -30,7 +30,7 @@ impl FromRef<AppState> for Key {
 }
 
 impl AppState {
-    pub fn new(config: &Config, pool: PgPool) -> anyhow::Result<Self> {
+    pub async fn new(config: &Config, pool: PgPool) -> anyhow::Result<Self> {
         let gh_app_client = github::create_gh_app_client(config)?;
         let instance_secret = Uuid::new_v4().to_string();
         tracing::info!("Instance secret: {}", &instance_secret);
@@ -43,20 +43,23 @@ impl AppState {
             config.github_app_id,
         );
 
+        let gh_runner = Runner::new(
+            slug.org,
+            slug.repo,
+            config.github_runner_installation_id,
+            github_clients.clone(),
+            config.clone(),
+        )
+        .await?;
+
         Ok(Self {
             config: config.clone(),
             cookie_key: Key::derive_from(config.cookie_secret_key.as_ref()),
             oauth: OAuth::new(config)?,
-            github_clients: github_clients.clone(),
+            github_clients,
             service: Service::new(pool),
             instance_secret,
-            gh_runner: Runner::new(
-                slug.org,
-                slug.repo,
-                config.github_runner_installation_id,
-                github_clients,
-                config.clone(),
-            ),
+            gh_runner,
         })
     }
 }
