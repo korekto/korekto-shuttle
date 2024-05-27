@@ -6,12 +6,12 @@ use crate::repository::Repository;
 
 pub mod dtos;
 mod find_user_by_id;
-mod github;
-mod schedule_grading;
+mod grading_tasks;
 pub(crate) mod trackable;
 mod user_assignments;
 mod user_modules;
 pub mod webhook_models;
+mod webhooks;
 
 #[derive(Clone)]
 pub struct Service {

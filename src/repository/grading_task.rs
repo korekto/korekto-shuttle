@@ -327,4 +327,42 @@ impl Repository {
             .await
             .map_err(|err| anyhow!("update_grading_task_non_terminal_status_transact(uuid={uuid}, status={status}): {err:?}"))
     }
+
+    pub async fn timeout_grading_tasks(
+        &self,
+        status: &Status,
+        min_creation_interval_in_secs: i32,
+    ) -> anyhow::Result<i32> {
+        const QUERY: &str = "\
+            WITH deleted_grading_task AS (
+                DELETE FROM grading_task
+                WHERE
+                  status = $1
+                  AND created_at < NOW() - interval '1 seconds' * $2
+                RETURNING *
+            ), updated_user_assignment AS (
+                UPDATE user_assignment ua
+                SET
+                  grading_in_progress = FALSE,
+                  graded_last_at = NOW(),
+                  previous_grading_error = 'Status ' || $1 || 'timed out after ' || $2 || ' secs',
+                  running_grading_short_commit_id = NULL,
+                  running_grading_commit_url = NULL,
+                  running_grading_log_url = NULL
+                FROM deleted_grading_task dgt
+                WHERE dgt.user_assignment_id = ua.id
+                RETURNING ua.*
+            )
+            SELECT count(dgt.*)::integer
+            FROM deleted_grading_task dgt
+            LEFT JOIN updated_user_assignment uua ON uua.id = dgt.user_assignment_id
+        ";
+
+        sqlx::query_scalar(QUERY)
+            .bind(status.to_string())
+            .bind(min_creation_interval_in_secs)
+            .fetch_one(&self.pool)
+            .await
+            .map_err(|err| anyhow!("timeout_grading_tasks(status={status}, min_creation_interval_in_secs={min_creation_interval_in_secs}): {err:?}"))
+    }
 }

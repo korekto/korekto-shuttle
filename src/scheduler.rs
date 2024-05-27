@@ -12,7 +12,7 @@ impl Scheduler {
     }
 
     pub async fn start(&self) {
-        let secs = self.state.config.scheduler_interval_in_secs();
+        let secs = self.state.config.scheduler_interval_in_secs;
         let mut interval = tokio::time::interval(Duration::from_secs(secs));
         info!("[scheduler] Starting scheduler every {secs} secs");
 
@@ -25,18 +25,20 @@ impl Scheduler {
     }
 
     pub async fn tick(&self) -> anyhow::Result<()> {
-        let task_count = self
+        let stats = self
             .state
             .service
-            .launch_grading_tasks(
-                self.state.config.min_grading_interval_in_secs(),
-                self.state.config.max_parallel_gradings(),
+            .schedule_tasks(
+                self.state.config.min_grading_interval_in_secs,
+                self.state.config.grading_ordered_timeout_in_secs,
+                self.state.config.grading_started_timeout_in_secs,
+                self.state.config.max_parallel_gradings,
                 &self.state.gh_runner,
             )
             .await?;
         info!(
-            "[scheduler] Ticking, found {task_count} tasks to run (min queue time={} sec)",
-            self.state.config.min_grading_interval_in_secs()
+            "[scheduler] Ticking, {stats} (min queue time={} sec)",
+            self.state.config.min_grading_interval_in_secs
         );
         Ok(())
     }
