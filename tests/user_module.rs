@@ -73,7 +73,7 @@ async fn setup_data(service: &Service) -> anyhow::Result<(User, Module)> {
         .await?;
 
     for assignment_state in ASSIGNMENT_STATES {
-        let assignment = service
+        let _assignment = service
             .repo
             .create_assignment(
                 &module_v0.uuid,
@@ -85,7 +85,7 @@ async fn setup_data(service: &Service) -> anyhow::Result<(User, Module)> {
             )
             .await?;
 
-        service
+        let assignments = service
             .repo
             .upsert_user_assignments(
                 &user.provider_login,
@@ -113,7 +113,7 @@ async fn setup_data(service: &Service) -> anyhow::Result<(User, Module)> {
         };
 
         service
-            .update_assignment_grade(&user.uuid, &assignment.uuid, grade)
+            .update_assignment_grade(assignments[0].id, grade)
             .await?;
     }
 

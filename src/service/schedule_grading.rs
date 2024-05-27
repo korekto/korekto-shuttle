@@ -1,7 +1,12 @@
 use crate::entities::NewGradingTask;
 use crate::github::webhook_models::GhWebhookEvent;
+use crate::repository::grading_task::Status;
+use crate::repository::Repository;
+use crate::service::dtos::{NewGradeRequest, VecInto};
+use crate::service::webhook_models::{RunnerPayload, RunnerStatus};
 use crate::service::Service;
-use tracing::warn;
+use time::OffsetDateTime;
+use tracing::{debug, warn};
 
 impl Service {
     pub async fn on_webhook(&self, event: GhWebhookEvent) -> anyhow::Result<()> {
@@ -72,6 +77,83 @@ impl Service {
                 })
                 .await?;
         }
+        Ok(())
+    }
+
+    pub async fn on_runner_webhook(&self, event: RunnerPayload) -> anyhow::Result<()> {
+        debug!("Received runner event: {event:?}");
+        match event.status {
+            RunnerStatus::Started => {
+                self.on_runner_event_started(&event).await?;
+            }
+            RunnerStatus::Completed => {
+                self.on_runner_event_completed(&event).await?;
+            }
+            RunnerStatus::Failure => {
+                self.repo
+                    .delete_grading_task(
+                        &event.task_id,
+                        Some("GitHub runner job failed".to_string()),
+                    )
+                    .await?;
+            }
+        };
+        Ok(())
+    }
+
+    async fn on_runner_event_started(&self, event: &RunnerPayload) -> anyhow::Result<()> {
+        let mut transaction = self.repo.start_transaction().await?;
+
+        let raw_grading_task = Repository::update_grading_task_non_terminal_status_transact(
+            &event.task_id,
+            &Status::STARTED,
+            &mut *transaction,
+        )
+        .await?;
+        Repository::update_assignment_current_grading_metadata(
+            raw_grading_task.user_assignment_id,
+            &event.metadata.short_commit_id,
+            &event.metadata.commit_url,
+            &event.full_log_url,
+            &mut *transaction,
+        )
+        .await?;
+
+        transaction.commit().await?;
+        Ok(())
+    }
+
+    async fn on_runner_event_completed(&self, event: &RunnerPayload) -> anyhow::Result<()> {
+        let mut transaction = self.repo.start_transaction().await?;
+        let error_message = if event.details.is_none() {
+            Some("GitHub runner job completed without grading details".to_string())
+        } else {
+            None
+        };
+        let task = Repository::delete_grading_task_transact(
+            &event.task_id,
+            error_message,
+            &mut *transaction,
+        )
+        .await?;
+
+        if let Some(details) = &event.details {
+            let grade = NewGradeRequest {
+                time: Some(OffsetDateTime::now_utc()),
+                short_commit_id: event.metadata.short_commit_id.clone(),
+                commit_url: event.metadata.commit_url.clone(),
+                grading_log_url: event.full_log_url.clone(),
+                details: details.parts.clone().vec_into(),
+            };
+            Self::update_assignment_grade_transact(
+                task.user_assignment_id,
+                grade,
+                &mut *transaction,
+            )
+            .await?;
+        }
+
+        transaction.commit().await?;
         Ok(())
     }
 }

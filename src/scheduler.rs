@@ -34,7 +34,10 @@ impl Scheduler {
                 &self.state.gh_runner,
             )
             .await?;
-        info!("[scheduler] Ticking, found {task_count} tasks to run");
+        info!(
+            "[scheduler] Ticking, found {task_count} tasks to run (min queue time={} sec)",
+            self.state.config.min_grading_interval_in_secs()
+        );
         Ok(())
     }
 }

@@ -96,6 +96,11 @@ CREATE TABLE IF NOT EXISTS "user_assignment" (
   normalized_grade NUMERIC(4, 2) NOT NULL DEFAULT 0,
   grades_history JSONB DEFAULT '[]'::jsonb,
   graded_last_at TIMESTAMPTZ,
+  grading_in_progress boolean NULL DEFAULT FALSE,
+  previous_grading_error VARCHAR,
+  running_grading_short_commit_id VARCHAR,
+  running_grading_commit_url VARCHAR,
+  running_grading_log_url VARCHAR,
   UNIQUE (user_id, assignment_id),
   CONSTRAINT fk_user_assignment_user_id
         FOREIGN KEY(user_id)
@@ -116,10 +121,7 @@ CREATE TABLE IF NOT EXISTS "grading_task" (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   repository VARCHAR NOT NULL,
   grader_repository VARCHAR NOT NULL,
-  latest_grading TIMESTAMPTZ,
   updated_at TIMESTAMPTZ NOT NULL,
-  version integer NOT NULL DEFAULT 1,
-  message VARCHAR,
   UNIQUE (user_assignment_id, user_provider_login, status),
   CONSTRAINT fk_grading_task_user_assignment_id
         FOREIGN KEY(user_assignment_id)

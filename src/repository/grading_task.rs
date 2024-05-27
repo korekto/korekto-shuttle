@@ -13,7 +13,7 @@
 //!  │ ││started│ When the started payload is received
 //!  │ │└┬──┬───┘
 //! ┌▽─▽─▽┐┌▽─────────┐
-//! │error││successful│ When the grading payload is received
+//! │error││successful│ When the grading payload is received (these status are virtual, terminal status events delete matching tasks)
 //! └─────┘└──────────┘
 //! (source https://arthursonzogni.com/Diagon/#GraphDAG)
 //! queued -> reserved -> ordered -> started -> successful
@@ -21,16 +21,16 @@
 //! queued -> error
 //! reserved  -> error
 //! ```
-//! Reservation is guarantied by optimistic locking inside a transaction
 
-use crate::entities::{GitHubGradingTask, GradingTask, NewGradingTask};
+use crate::entities::{GitHubGradingTask, GradingTask, NewGradingTask, RawGradingTask};
 use crate::repository::Repository;
 use anyhow::anyhow;
 use sqlx::{Executor, Postgres};
 use std::fmt;
+use std::str::FromStr;
 use time::OffsetDateTime;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Status {
     QUEUED,
     RESERVED,
@@ -38,6 +38,35 @@ pub enum Status {
     STARTED,
     ERROR,
     SUCCESSFUL,
+}
+
+pub trait Terminal {
+    fn is_terminal(&self) -> bool;
+}
+
+impl Terminal for Status {
+    fn is_terminal(&self) -> bool {
+        match self {
+            Self::QUEUED | Self::RESERVED | Self::ORDERED | Self::STARTED => false,
+            Self::ERROR | Self::SUCCESSFUL => true,
+        }
+    }
+}
+
+impl FromStr for Status {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        match input {
+            "QUEUED" => Ok(Self::QUEUED),
+            "RESERVED" => Ok(Self::RESERVED),
+            "ORDERED" => Ok(Self::ORDERED),
+            "STARTED" => Ok(Self::STARTED),
+            "ERROR" => Ok(Self::ERROR),
+            "SUCCESSFUL" => Ok(Self::SUCCESSFUL),
+            _ => Err(()),
+        }
+    }
 }
 
 impl fmt::Display for Status {
@@ -85,14 +114,15 @@ impl Repository {
     ) -> anyhow::Result<OffsetDateTime> {
         const QUERY: &str = "INSERT INTO grading_task
           (user_assignment_id, user_provider_login, status, repository, grader_repository, updated_at)
-        VALUES ($1, $2, 'queued', $3, $4, NOW())
+        VALUES ($1, $2, $3, $4, $5, NOW())
         ON CONFLICT (user_assignment_id, user_provider_login, status) DO UPDATE
-        SET updated_at= NOW()
+        SET updated_at = NOW()
         RETURNING updated_at";
 
         Ok(sqlx::query_scalar(QUERY)
             .bind(user_assignment_id)
             .bind(user_provider_name)
+            .bind(Status::QUEUED.to_string())
             .bind(repository)
             .bind(grader_repository)
             .fetch_one(&self.pool)
@@ -106,7 +136,7 @@ impl Repository {
     ) -> anyhow::Result<OffsetDateTime> {
         const QUERY: &str = "INSERT INTO grading_task
           (user_assignment_id, user_provider_login, status, repository, grader_repository, updated_at)
-        SELECT ua.id, u.provider_login, 'queued', a.repository_name, a.grader_url, NOW()
+        SELECT ua.id, u.provider_login, $3, a.repository_name, a.grader_url, NOW()
         FROM user_assignment ua, \"user\" u, assignment a
         WHERE
           ua.user_id = u.id
@@ -120,6 +150,7 @@ impl Repository {
         Ok(sqlx::query_scalar(QUERY)
             .bind(assignment_uuid)
             .bind(user_uuid)
+            .bind(Status::QUEUED.to_string())
             .fetch_one(&self.pool)
             .await?)
     }
@@ -159,7 +190,7 @@ impl Repository {
             .map_err(|err| anyhow!("get_unparseable_webhooks({page}, {per_page}): {:?}", &err))
     }
 
-    pub async fn reserve_grading_tasks_to_execute<'e, 'c: 'e, E>(
+    pub async fn reserve_grading_tasks_to_execute_transact<'e, 'c: 'e, E>(
         min_execution_interval_in_secs: i32,
         max_tasks: i32,
         transaction: E,
@@ -173,11 +204,11 @@ impl Repository {
                 gt.id,
                 gt.uuid::varchar as uuid,
                 ua.uuid::varchar as user_assignment_uuid,
+                ua.id as user_assignment_id,
                 gt.user_provider_login as provider_login,
                 gt.status,
                 gt.created_at,
                 gt.updated_at,
-                gt.version,
                 a.repository_name,
                 u.installation_id,
                 a.grader_url as grader_url
@@ -186,87 +217,114 @@ impl Repository {
               AND ua.assignment_id = a.id
               AND a.module_id = m.id
               AND ua.user_id = u.id
-              AND (ua.graded_last_at IS NULL OR ua.graded_last_at < NOW() - interval '$1 seconds')
-              AND gt.status IN ('queued', 'ordered', 'running')
+              AND ua.grading_in_progress IS FALSE
+              AND (ua.graded_last_at IS NULL OR ua.graded_last_at < NOW() - interval '1 seconds' * $1)
+              AND gt.status = ANY ($3)
               ORDER BY gt.created_at ASC
               LIMIT $2
+            ),
+            grading_task_update as (
+              UPDATE grading_task gt SET status = $5
+              FROM max_tasks mt
+              WHERE mt.id = gt.id
+              AND mt.status = $4
+              RETURNING mt.*
             )
-            UPDATE grading_task gt SET status = 'reserved'
-            FROM max_tasks mt
-            WHERE mt.id = gt.id
-            AND mt.status = 'queued'
-            RETURNING mt.*
+            UPDATE user_assignment ua SET
+              grading_in_progress = TRUE,
+              previous_grading_error = NULL
+            FROM grading_task_update gtu
+            WHERE gtu.user_assignment_id = ua.id
+            RETURNING gtu.*
         ";
 
         sqlx::query_as::<_, GitHubGradingTask>(QUERY)
             .bind(min_execution_interval_in_secs)
             .bind(max_tasks)
+            .bind(&[Status::QUEUED.to_string(), Status::RESERVED.to_string(), Status::ORDERED.to_string(), Status::STARTED.to_string()])
+            .bind(Status::QUEUED.to_string())
+            .bind(Status::RESERVED.to_string())
             .fetch_all(transaction)
             .await
             .map_err(|err| anyhow!("reserve_grading_tasks_to_execute(min_execution_interval_in_secs={min_execution_interval_in_secs}, max_tasks={max_tasks}): {err:?}"))
     }
 
-    pub async fn update_grading_task_status<'e, 'c: 'e, E>(
+    pub async fn delete_grading_task(
+        &self,
+        uuid: &str,
+        error_message: Option<String>,
+    ) -> anyhow::Result<RawGradingTask> {
+        Self::delete_grading_task_transact(uuid, error_message, &self.pool).await
+    }
+
+    pub async fn delete_grading_task_transact<'e, 'c: 'e, E>(
+        uuid: &str,
+        error_message: Option<String>,
+        transaction: E,
+    ) -> anyhow::Result<RawGradingTask>
+    where
+        E: 'e + Executor<'c, Database = Postgres>,
+    {
+        const QUERY: &str = "\
+            WITH deleted_grading_task AS (
+                DELETE FROM grading_task WHERE uuid::varchar = $1
+                RETURNING *, uuid::varchar as uuid
+            )
+            UPDATE user_assignment ua
+            SET
+              grading_in_progress = FALSE,
+              graded_last_at = NOW(),
+              previous_grading_error = $2,
+              running_grading_short_commit_id = NULL,
+              running_grading_commit_url = NULL,
+              running_grading_log_url = NULL
+            FROM deleted_grading_task dgt
+            WHERE dgt.user_assignment_id = ua.id
+            RETURNING dgt.*
+        ";
+
+        sqlx::query_as::<_, RawGradingTask>(QUERY)
+            .bind(uuid)
+            .bind(error_message)
+            .fetch_one(transaction)
+            .await
+            .map_err(|err| anyhow!("delete_grading_task_transact(uuid={uuid}): {err:?}"))
+    }
+
+    pub async fn update_grading_task_non_terminal_status(
+        &self,
         uuid: &str,
         status: &Status,
-        message: &Option<String>,
+    ) -> anyhow::Result<RawGradingTask> {
+        Self::update_grading_task_non_terminal_status_transact(uuid, status, &self.pool).await
+    }
+
+    pub async fn update_grading_task_non_terminal_status_transact<'e, 'c: 'e, E>(
+        uuid: &str,
+        status: &Status,
         transaction: E,
-    ) -> anyhow::Result<()>
+    ) -> anyhow::Result<RawGradingTask>
     where
         E: 'e + Executor<'c, Database = Postgres>,
     {
         const QUERY: &str = "\
             UPDATE grading_task
-            SET status = $2, message = $3
+            SET status = $2
             WHERE uuid::varchar = $1
+            RETURNING *, uuid::varchar as uuid
         ";
 
-        sqlx::query(QUERY)
+        if status.is_terminal() {
+            Err(anyhow!(
+                "Cannot update grading_task with given terminal status"
+            ))?;
+        }
+
+        sqlx::query_as::<_, RawGradingTask>(QUERY)
             .bind(uuid)
             .bind(status.to_string())
-            .bind(message)
-            .execute(transaction)
+            .fetch_one(transaction)
             .await
-            .map_err(|err| anyhow!("update_grading_task_status(uuid={uuid}, status={status}, message={message:?}: {err:?}"))?;
-        Ok(())
-    }
-
-    pub async fn get_grading_tasks_to_execute(
-        &self,
-        min_execution_interval_in_secs: i32,
-        max_tasks: i32,
-    ) -> anyhow::Result<Vec<GitHubGradingTask>> {
-        const QUERY: &str = "\
-            WITH max_tasks as (
-              SELECT
-                aua.uuid::varchar as user_assignment_uuid,
-                gt.user_provider_login as provider_login,
-                gt.status,
-                gt.created_at,
-                gt.updated_at,
-                gt.version,
-                a.repository_name,
-                u.installation_id,
-                a.grader_url as grader_url
-              FROM grading_task gt, user_assignment ua, assignment a, module m, \"user\" u
-              WHERE gt.user_assignment_id = ua.id
-              AND ua.assignment_id = a.id
-              AND a.module_id = m.id
-              AND ua.user_id = u.id
-              AND (ua.graded_last_at IS NULL OR ua.graded_last_at < NOW() - interval '$1 seconds')
-              AND gt.status IN ('queued', 'ordered', 'running')
-              ORDER BY gt.created_at DESC
-              LIMIT $2
-            )
-            SELECT * FROM max_tasks
-            WHERE status = 'queued'
-        ";
-
-        sqlx::query_as::<_, GitHubGradingTask>(QUERY)
-            .bind(min_execution_interval_in_secs)
-            .bind(max_tasks)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|err| anyhow!("get_grading_tasks_to_execute(min_execution_interval_in_secs={min_execution_interval_in_secs}, max_tasks={max_tasks}): {err:?}"))
+            .map_err(|err| anyhow!("update_grading_task_non_terminal_status_transact(uuid={uuid}, status={status}): {err:?}"))
     }
 }

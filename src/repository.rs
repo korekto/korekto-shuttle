@@ -20,7 +20,7 @@ pub type PgTransaction<'a> = Transaction<'a, Postgres>;
 
 #[derive(Debug, Clone)]
 pub struct Repository {
-    pool: PgPool,
+    pub pool: PgPool,
 }
 
 impl Repository {

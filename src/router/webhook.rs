@@ -1,15 +1,16 @@
+use crate::github::runner::Runner;
 use crate::github::webhook_models::parse_event;
 use crate::router::state::AppState;
+use crate::service::webhook_models::RunnerPayload;
 use crate::string_header;
-use anyhow::anyhow;
+use axum::extract::rejection::JsonRejection;
 use axum::extract::State;
 use axum::{routing::post, Json, Router};
 use axum_extra::TypedHeader;
 use headers::authorization::Bearer;
 use headers::Authorization;
 use http::StatusCode;
-use serde::Deserialize;
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 
 string_header!(XGithubEvent, X_GITHUB_EVENT_HEADER, "x-github-event");
 string_header!(XHubSignature, X_HUB_SIGNATURE, "x-hub-signature-256");
@@ -27,7 +28,7 @@ async fn on_github_event(
     State(state): State<AppState>,
     payload: String,
 ) {
-    if let Err(err) = is_signature_valid(
+    if let Err(err) = Runner::is_signature_valid(
         &payload,
         &state.config.github_app_webhook_secret,
         &signature,
@@ -36,8 +37,7 @@ async fn on_github_event(
     } else {
         match parse_event(&event_type, &payload) {
             Ok(result) => {
-                // TODO save user info
-                tracing::info!("Received webhook event={result:?}");
+                let _res = state.service.on_webhook(result).await;
             }
             Err(err) => {
                 if let Err(err) = state
@@ -57,75 +57,28 @@ async fn on_github_event(
 async fn on_github_runner_event(
     TypedHeader(Authorization(bearer)): TypedHeader<Authorization<Bearer>>,
     State(state): State<AppState>,
-    Json(payload): Json<RunnerPayload>,
+    payload_result: Result<Json<RunnerPayload>, JsonRejection>,
 ) -> Result<(), (StatusCode, String)> {
-    state.gh_runner.verify_jwt(bearer.token()).map_err(|err| {
-        error!("Unprocessable runner event: {err:?}");
-        (StatusCode::UNAUTHORIZED, format!("{err:?}"))
-    })?;
-    info!("Received runner event: {payload:?}");
-    Ok(())
-}
+    match payload_result {
+        Ok(Json(payload)) => {
+            state.gh_runner.verify_jwt(bearer.token()).map_err(|err| {
+                error!("Unprocessable runner event: {err:?}");
+                (StatusCode::UNAUTHORIZED, format!("{err:?}"))
+            })?;
 
-pub fn is_signature_valid(payload: &str, secret: &str, signature: &str) -> anyhow::Result<()> {
-    use hmac::Mac;
-
-    type HmacSha256 = hmac::Hmac<sha2::Sha256>;
-
-    if let Some((_raw_alg, sig)) = signature.split_once('=') {
-        #[allow(clippy::expect_used)]
-        let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
-            .expect("could not fail, waiting for into_ok() stabilization");
-
-        mac.update(payload.as_bytes());
-
-        let code_bytes = decode_hex(sig)?;
-
-        mac.verify_slice(&code_bytes[..])?;
-
-        Ok(())
-    } else {
-        Err(anyhow!("Missing algorithm:"))
+            state
+                .service
+                .on_runner_webhook(payload)
+                .await
+                .map_err(|err| {
+                    warn!("Error when handling runner webhook: {err:?}");
+                    (StatusCode::INTERNAL_SERVER_ERROR, format!("{err:?}"))
+                })?;
+        }
+        Err(err) => {
+            error!("Unknown error: {err:?}");
+        }
     }
-}
 
-fn decode_hex(s: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
-    (0..s.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
-        .collect()
-}
-
-#[derive(Deserialize, Debug)]
-struct RunnerPayload {
-    pub status: RunnerStatus,
-    pub student_login: String,
-    pub grader_repo: String,
-    pub task_id: String,
-    pub full_log_url: String,
-    pub details: Option<RunnerGradeDetails>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "snake_case")]
-enum RunnerStatus {
-    Started,
-    Completed,
-}
-
-#[derive(Deserialize, Debug)]
-struct RunnerGradeDetails {
-    pub grade: f32,
-    #[serde(rename = "maxGrade")]
-    pub max_grade: f32,
-    pub parts: Vec<RunnerGradePart>,
-}
-
-#[derive(Deserialize, Debug)]
-struct RunnerGradePart {
-    pub id: String,
-    pub grade: f32,
-    #[serde(rename = "maxGrade")]
-    pub max_grade: Option<f32>,
-    pub comments: Vec<String>,
+    Ok(())
 }

@@ -47,7 +47,8 @@ impl Runner {
         let client = self.client.get_for_installation(self.installation_id)?;
         let slug = url_to_slug(&task.grader_url)
             .ok_or_else(|| anyhow!("Invalid grader URL: {}", &task.grader_url))?;
-        let original_callback_url = format!("{}/github/todo", self.config.server_base_url());
+        let original_callback_url =
+            format!("{}/webhook/github/runner", self.config.server_base_url());
         let callback_url = self
             .config
             .github_runner_callback_url_override
@@ -65,6 +66,7 @@ impl Runner {
             .inputs(serde_json::json!({
                 "grader-repo": slug.to_string(),
                 "student-login": task.provider_login,
+                "student-repo": task.repository_name,
                 "callback-url": callback_url,
                 "task-id": task.uuid,
             }))
@@ -111,6 +113,35 @@ impl Runner {
                 token_message.claims.repository
             ))
         }
+    }
+
+    pub fn is_signature_valid(payload: &str, secret: &str, signature: &str) -> anyhow::Result<()> {
+        use hmac::Mac;
+
+        type HmacSha256 = hmac::Hmac<sha2::Sha256>;
+
+        if let Some((_raw_alg, sig)) = signature.split_once('=') {
+            #[allow(clippy::expect_used)]
+            let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
+                .expect("could not fail, waiting for into_ok() stabilization");
+
+            mac.update(payload.as_bytes());
+
+            let code_bytes = Self::decode_hex(sig)?;
+
+            mac.verify_slice(&code_bytes[..])?;
+
+            Ok(())
+        } else {
+            Err(anyhow!("Missing algorithm:"))
+        }
+    }
+
+    fn decode_hex(s: &str) -> Result<Vec<u8>, std::num::ParseIntError> {
+        (0..s.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
+            .collect()
     }
 }
 

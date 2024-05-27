@@ -3,6 +3,7 @@ use crate::entities::{
     Assignment, Details, EmbeddedAssignmentDesc, GradingTask, InstantGrade, Module, ModuleDesc,
     UnparseableWebhook, UserAssignment, UserAssignmentDesc, UserModule, UserModuleDesc,
 };
+use crate::service::webhook_models::RunnerGradePart;
 use rust_decimal::Decimal;
 use serde::Serialize;
 use time::format_description::well_known::Iso8601;
@@ -493,6 +494,17 @@ pub struct NewGradeDetailRequest {
     pub grade: f32,
     pub max_grade: Option<f32>,
     pub messages: Vec<String>,
+}
+
+impl From<RunnerGradePart> for NewGradeDetailRequest {
+    fn from(value: RunnerGradePart) -> Self {
+        Self {
+            name: value.id,
+            grade: value.grade,
+            max_grade: value.max_grade,
+            messages: value.comments,
+        }
+    }
 }
 
 impl From<NewGradeDetailRequest> for Details {
