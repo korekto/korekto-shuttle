@@ -277,6 +277,7 @@ pub struct UserAssignment {
     pub user_provider_login: String,
     pub normalized_grade: f32,
     pub grades_history: Json<Vec<InstantGrade>>,
+    pub grading_tasks: Json<Vec<RawGradingTask>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -315,15 +316,22 @@ pub struct GradingTask {
 pub struct GitHubGradingTask {
     pub id: i32,
     pub uuid: String,
-    pub user_assignment_uuid: String,
+    pub user_assignment_id: i32,
     pub provider_login: String,
     pub status: String,
-    pub version: i32,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
     pub repository_name: String,
     pub installation_id: String,
     pub grader_url: String,
+}
+
+#[derive(sqlx::FromRow, Deserialize, Debug, Clone)]
+pub struct RawGradingTask {
+    pub id: i32,
+    pub uuid: String,
+    pub user_assignment_id: i32,
+    pub status: String,
 }
 
 impl crate::service::trackable::WithTotalCount for GradingTask {

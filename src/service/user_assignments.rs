@@ -1,19 +1,31 @@
 use crate::entities::{InstantGrade, User};
 use crate::github::client_cache::ClientCache;
+use crate::repository::Repository;
 use crate::service::dtos::{NewGradeRequest, VecInto};
 use crate::service::{Service, SyncError};
 use http::StatusCode;
 use octocrab::Error;
+use sqlx::{Executor, Postgres};
 use time::OffsetDateTime;
 use tracing::info;
 
 impl Service {
     pub async fn update_assignment_grade(
         &self,
-        user_uuid: &str,
-        assignment_uuid: &str,
+        user_assignment_id: i32,
         new_grade: NewGradeRequest,
     ) -> anyhow::Result<()> {
+        Self::update_assignment_grade_transact(user_assignment_id, new_grade, &self.repo.pool).await
+    }
+
+    pub async fn update_assignment_grade_transact<'e, 'c: 'e, E>(
+        user_assignment_id: i32,
+        new_grade: NewGradeRequest,
+        transaction: E,
+    ) -> anyhow::Result<()>
+    where
+        E: 'e + Executor<'c, Database = Postgres>,
+    {
         let grade: f32 = new_grade.details.iter().map(|d| d.grade).sum();
         let max_grade: f32 = new_grade
             .details
@@ -30,8 +42,7 @@ impl Service {
             grading_log_url: new_grade.grading_log_url,
             details: new_grade.details.vec_into(),
         };
-        self.repo
-            .update_assignment_grade(user_uuid, assignment_uuid, &grade_entity)
+        Repository::update_assignment_grade_transact(user_assignment_id, &grade_entity, transaction)
             .await
     }
 

@@ -11,6 +11,7 @@ mod schedule_grading;
 pub(crate) mod trackable;
 mod user_assignments;
 mod user_modules;
+pub mod webhook_models;
 
 #[derive(Clone)]
 pub struct Service {
