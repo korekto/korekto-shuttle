@@ -98,9 +98,7 @@ CREATE TABLE IF NOT EXISTS "user_assignment" (
   graded_last_at TIMESTAMPTZ,
   grading_in_progress boolean NULL DEFAULT FALSE,
   previous_grading_error VARCHAR,
-  running_grading_short_commit_id VARCHAR,
-  running_grading_commit_url VARCHAR,
-  running_grading_log_url VARCHAR,
+  running_grading_metadata JSONB,
   UNIQUE (user_id, assignment_id),
   CONSTRAINT fk_user_assignment_user_id
         FOREIGN KEY(user_id)

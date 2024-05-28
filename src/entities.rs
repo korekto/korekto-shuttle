@@ -278,6 +278,10 @@ pub struct UserAssignment {
     pub normalized_grade: f32,
     pub grades_history: Json<Vec<InstantGrade>>,
     pub grading_tasks: Json<Vec<RawGradingTask>>,
+    pub grading_in_progress: bool,
+    pub previous_grading_error: Option<String>,
+    pub running_grading_metadata: Option<Json<GradingMetadata>>,
+    pub queue_due_to: i32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -338,4 +342,11 @@ impl crate::service::trackable::WithTotalCount for GradingTask {
     fn total_count(&self) -> i32 {
         self.total_count
     }
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct GradingMetadata {
+    pub short_commit_id: String,
+    pub commit_url: String,
+    pub full_log_url: String,
 }

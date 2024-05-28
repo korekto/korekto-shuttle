@@ -1,7 +1,7 @@
 use crate::entities::{InstantGrade, User};
 use crate::github::client_cache::ClientCache;
 use crate::repository::Repository;
-use crate::service::dtos::{NewGradeRequest, VecInto};
+use crate::service::dtos::{NewGradeRequest, UserAssignmentResponse, VecInto};
 use crate::service::{Service, SyncError};
 use http::StatusCode;
 use octocrab::Error;
@@ -51,11 +51,17 @@ impl Service {
         user: &User,
         module_uuid: &str,
         assignment_uuid: &str,
+        min_execution_interval_in_secs: i32,
         app_client: &ClientCache,
     ) -> Result<(), SyncError> {
         let assignment = &self
             .repo
-            .get_assignment(user, module_uuid, assignment_uuid)
+            .get_assignment(
+                user,
+                module_uuid,
+                assignment_uuid,
+                min_execution_interval_in_secs,
+            )
             .await
             .map_err(SyncError::Unknown)?
             .ok_or(SyncError::AssignmentNotFound)?;
@@ -98,5 +104,23 @@ impl Service {
         }
 
         Ok(())
+    }
+
+    pub async fn get_assignment(
+        &self,
+        user: &User,
+        module_uuid: &str,
+        assignment_uuid: &str,
+        min_execution_interval_in_secs: i32,
+    ) -> anyhow::Result<Option<UserAssignmentResponse>> {
+        self.repo
+            .get_assignment(
+                user,
+                module_uuid,
+                assignment_uuid,
+                min_execution_interval_in_secs,
+            )
+            .await
+            .map(|opt| opt.and_then(|ua| ua.try_into().ok()))
     }
 }

@@ -25,13 +25,14 @@
 use crate::entities::{GitHubGradingTask, GradingTask, NewGradingTask, RawGradingTask};
 use crate::repository::Repository;
 use anyhow::anyhow;
+use serde::Serialize;
 use sqlx::{Executor, Postgres};
 use std::fmt;
 use std::str::FromStr;
 use time::OffsetDateTime;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Status {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+pub enum GradingStatus {
     QUEUED,
     RESERVED,
     ORDERED,
@@ -44,7 +45,7 @@ pub trait Terminal {
     fn is_terminal(&self) -> bool;
 }
 
-impl Terminal for Status {
+impl Terminal for GradingStatus {
     fn is_terminal(&self) -> bool {
         match self {
             Self::QUEUED | Self::RESERVED | Self::ORDERED | Self::STARTED => false,
@@ -53,7 +54,7 @@ impl Terminal for Status {
     }
 }
 
-impl FromStr for Status {
+impl FromStr for GradingStatus {
     type Err = ();
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -69,7 +70,7 @@ impl FromStr for Status {
     }
 }
 
-impl fmt::Display for Status {
+impl fmt::Display for GradingStatus {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{self:?}")
     }
@@ -122,7 +123,7 @@ impl Repository {
         Ok(sqlx::query_scalar(QUERY)
             .bind(user_assignment_id)
             .bind(user_provider_name)
-            .bind(Status::QUEUED.to_string())
+            .bind(GradingStatus::QUEUED.to_string())
             .bind(repository)
             .bind(grader_repository)
             .fetch_one(&self.pool)
@@ -150,7 +151,7 @@ impl Repository {
         Ok(sqlx::query_scalar(QUERY)
             .bind(assignment_uuid)
             .bind(user_uuid)
-            .bind(Status::QUEUED.to_string())
+            .bind(GradingStatus::QUEUED.to_string())
             .fetch_one(&self.pool)
             .await?)
     }
@@ -241,9 +242,9 @@ impl Repository {
         sqlx::query_as::<_, GitHubGradingTask>(QUERY)
             .bind(min_execution_interval_in_secs)
             .bind(max_tasks)
-            .bind(&[Status::QUEUED.to_string(), Status::RESERVED.to_string(), Status::ORDERED.to_string(), Status::STARTED.to_string()])
-            .bind(Status::QUEUED.to_string())
-            .bind(Status::RESERVED.to_string())
+            .bind(&[GradingStatus::QUEUED.to_string(), GradingStatus::RESERVED.to_string(), GradingStatus::ORDERED.to_string(), GradingStatus::STARTED.to_string()])
+            .bind(GradingStatus::QUEUED.to_string())
+            .bind(GradingStatus::RESERVED.to_string())
             .fetch_all(transaction)
             .await
             .map_err(|err| anyhow!("reserve_grading_tasks_to_execute(min_execution_interval_in_secs={min_execution_interval_in_secs}, max_tasks={max_tasks}): {err:?}"))
@@ -275,9 +276,7 @@ impl Repository {
               grading_in_progress = FALSE,
               graded_last_at = NOW(),
               previous_grading_error = $2,
-              running_grading_short_commit_id = NULL,
-              running_grading_commit_url = NULL,
-              running_grading_log_url = NULL
+              running_grading_metadata = NULL
             FROM deleted_grading_task dgt
             WHERE dgt.user_assignment_id = ua.id
             RETURNING dgt.*
@@ -294,14 +293,14 @@ impl Repository {
     pub async fn update_grading_task_non_terminal_status(
         &self,
         uuid: &str,
-        status: &Status,
+        status: &GradingStatus,
     ) -> anyhow::Result<RawGradingTask> {
         Self::update_grading_task_non_terminal_status_transact(uuid, status, &self.pool).await
     }
 
     pub async fn update_grading_task_non_terminal_status_transact<'e, 'c: 'e, E>(
         uuid: &str,
-        status: &Status,
+        status: &GradingStatus,
         transaction: E,
     ) -> anyhow::Result<RawGradingTask>
     where
@@ -330,7 +329,7 @@ impl Repository {
 
     pub async fn timeout_grading_tasks(
         &self,
-        status: &Status,
+        status: &GradingStatus,
         min_creation_interval_in_secs: i32,
     ) -> anyhow::Result<i32> {
         const QUERY: &str = "\
@@ -345,10 +344,8 @@ impl Repository {
                 SET
                   grading_in_progress = FALSE,
                   graded_last_at = NOW(),
-                  previous_grading_error = 'Status ' || $1 || 'timed out after ' || $2 || ' secs',
-                  running_grading_short_commit_id = NULL,
-                  running_grading_commit_url = NULL,
-                  running_grading_log_url = NULL
+                  previous_grading_error = 'Status ' || $1 || ' timed out after ' || $2 || ' secs',
+                  running_grading_metadata = NULL
                 FROM deleted_grading_task dgt
                 WHERE dgt.user_assignment_id = ua.id
                 RETURNING ua.*

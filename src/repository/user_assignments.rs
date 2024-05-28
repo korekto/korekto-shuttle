@@ -1,4 +1,4 @@
-use crate::entities::{Assignment, InstantGrade, User, UserAssignment};
+use crate::entities::{Assignment, GradingMetadata, InstantGrade, User, UserAssignment};
 use crate::repository::Repository;
 use anyhow::anyhow;
 use const_format::formatcp;
@@ -76,6 +76,7 @@ impl Repository {
         user: &User,
         module_uuid: &str,
         assignment_uuid: &str,
+        min_execution_interval_in_secs: i32,
     ) -> anyhow::Result<Option<UserAssignment>> {
         const QUERY: &str = formatcp!(
             "\
@@ -95,7 +96,16 @@ impl Repository {
               u.provider_login as user_provider_login,
               COALESCE(ua.normalized_grade, 0)::real as normalized_grade,
               COALESCE(ua.grades_history, '[]'::jsonb) as grades_history,
-              coalesce(json_agg(to_jsonb(gt.*) ORDER BY gt.created_at asc) FILTER (WHERE gt.id IS NOT NULL), '[]'::json) AS grading_tasks
+              coalesce(json_agg(to_jsonb(gt.*) ORDER BY gt.created_at asc) FILTER (WHERE gt.id IS NOT NULL), '[]'::json) AS grading_tasks,
+              COALESCE(ua.grading_in_progress, FALSE) as grading_in_progress,
+              ua.previous_grading_error,
+              ua.running_grading_metadata,
+              CASE
+                WHEN ua.graded_last_at IS NULL
+                  THEN 0
+                ELSE
+                  GREATEST(EXTRACT(EPOCH FROM age(ua.graded_last_at + interval '1 seconds' * $4, NOW()))::integer, 0)
+                END queue_due_to
             FROM assignment a
             INNER JOIN module m ON m.id = a.module_id
             INNER JOIN user_module um ON um.module_id = m.id
@@ -113,6 +123,7 @@ impl Repository {
             .bind(user.id)
             .bind(module_uuid)
             .bind(assignment_uuid)
+            .bind(min_execution_interval_in_secs)
             .fetch_optional(&self.pool)
             .await
             .map_err(|err| {
@@ -125,9 +136,7 @@ impl Repository {
 
     pub async fn update_assignment_current_grading_metadata<'e, 'c: 'e, E>(
         user_assignment_id: i32,
-        short_commit_id: &str,
-        commit_url: &str,
-        full_log_url: &str,
+        grading_metadata: &GradingMetadata,
         transaction: E,
     ) -> anyhow::Result<()>
     where
@@ -137,18 +146,14 @@ impl Repository {
             UPDATE user_assignment ua
             SET
               updated_at = NOW(),
-              running_grading_short_commit_id = $2,
-              running_grading_commit_url = $3,
-              running_grading_log_url = $4
+              running_grading_metadata = $2
             WHERE
               ua.id = $1
         ";
 
         sqlx::query(QUERY)
             .bind(user_assignment_id)
-            .bind(short_commit_id)
-            .bind(commit_url)
-            .bind(full_log_url)
+            .bind(Json(grading_metadata))
             .execute(transaction)
             .await?;
         Ok(())
