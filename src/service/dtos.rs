@@ -3,9 +3,11 @@ use crate::entities::{
     Assignment, Details, EmbeddedAssignmentDesc, GradingTask, InstantGrade, Module, ModuleDesc,
     UnparseableWebhook, UserAssignment, UserAssignmentDesc, UserModule, UserModuleDesc,
 };
+use crate::repository::grading_task::GradingStatus;
 use crate::service::webhook_models::RunnerGradePart;
 use rust_decimal::Decimal;
 use serde::Serialize;
+use std::str::FromStr;
 use time::format_description::well_known::Iso8601;
 use time::serde::rfc3339 as dto_time_serde;
 use time::OffsetDateTime;
@@ -383,6 +385,9 @@ pub struct UserAssignmentResponse {
     pub repository_url: String,
     pub factor_percentage: i32,
     pub normalized_grade: f32,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub status: Option<GradingStatus>,
+    pub queue_due_to: i32,
     pub locked: bool,
     #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub lock_reason: Option<String>,
@@ -390,11 +395,45 @@ pub struct UserAssignmentResponse {
     pub latest_run: Option<CompleteRunInfoResponse>,
     #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub ongoing_run: Option<RunInfo>,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub error: Option<String>,
 }
 
-impl From<UserAssignment> for UserAssignmentResponse {
-    fn from(value: UserAssignment) -> Self {
-        Self {
+fn compute_status(value: &UserAssignment) -> Option<GradingStatus> {
+    let mut tasks: Vec<GradingStatus> = value
+        .grading_tasks
+        .0
+        .clone()
+        .iter()
+        .filter_map(|gt| GradingStatus::from_str(&gt.status).ok())
+        .collect();
+    tasks.sort();
+
+    let status = tasks.pop();
+    status.or_else(|| {
+        if value.previous_grading_error.is_some() {
+            Some(GradingStatus::ERROR)
+        } else {
+            None
+        }
+    })
+}
+
+fn compute_ongoing_run(value: &UserAssignment) -> Option<RunInfo> {
+    value.clone().running_grading_metadata.map(|m| RunInfo {
+        short_commit_id: m.0.short_commit_id,
+        commit_url: m.0.commit_url,
+        grading_log_url: m.0.full_log_url,
+    })
+}
+
+impl TryFrom<UserAssignment> for UserAssignmentResponse {
+    type Error = anyhow::Error;
+
+    fn try_from(value: UserAssignment) -> Result<Self, Self::Error> {
+        let status = compute_status(&value);
+        let ongoing_run = compute_ongoing_run(&value);
+        Ok(Self {
             id: value.uuid,
             name: value.name,
             description: value.description,
@@ -403,6 +442,8 @@ impl From<UserAssignment> for UserAssignmentResponse {
             a_type: value.a_type,
             factor_percentage: value.factor_percentage,
             normalized_grade: value.normalized_grade,
+            status,
+            queue_due_to: value.queue_due_to,
             repo_linked: value.repo_linked,
             repository_url: format!(
                 "https://github.com/{}/{}",
@@ -414,8 +455,9 @@ impl From<UserAssignment> for UserAssignmentResponse {
             latest_run: value.grades_history.last().map(|g| g.clone().into()),
             locked: false,
             lock_reason: None,
-            ongoing_run: None,
-        }
+            ongoing_run,
+            error: value.previous_grading_error,
+        })
     }
 }
 

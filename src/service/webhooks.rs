@@ -1,6 +1,6 @@
-use crate::entities::NewGradingTask;
+use crate::entities::{GradingMetadata, NewGradingTask};
 use crate::github::webhook_models::GhWebhookEvent;
-use crate::repository::grading_task::Status;
+use crate::repository::grading_task::GradingStatus;
 use crate::repository::Repository;
 use crate::service::dtos::{NewGradeRequest, VecInto};
 use crate::service::webhook_models::{RunnerPayload, RunnerStatus};
@@ -106,15 +106,18 @@ impl Service {
 
         let raw_grading_task = Repository::update_grading_task_non_terminal_status_transact(
             &event.task_id,
-            &Status::STARTED,
+            &GradingStatus::STARTED,
             &mut *transaction,
         )
         .await?;
+        let metadata = GradingMetadata {
+            short_commit_id: event.metadata.short_commit_id.clone(),
+            commit_url: event.metadata.commit_url.clone(),
+            full_log_url: event.full_log_url.clone(),
+        };
         Repository::update_assignment_current_grading_metadata(
             raw_grading_task.user_assignment_id,
-            &event.metadata.short_commit_id,
-            &event.metadata.commit_url,
-            &event.full_log_url,
+            &metadata,
             &mut *transaction,
         )
         .await?;

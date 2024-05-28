@@ -1,5 +1,5 @@
 use crate::github;
-use crate::repository::{grading_task::Status, Repository};
+use crate::repository::{grading_task::GradingStatus, Repository};
 use crate::service::Service;
 use std::fmt;
 use tracing::warn;
@@ -43,11 +43,11 @@ impl Service {
 
         stats.ordered_timeout += self
             .repo
-            .timeout_grading_tasks(&Status::ORDERED, ordered_timeout_in_secs)
+            .timeout_grading_tasks(&GradingStatus::ORDERED, ordered_timeout_in_secs)
             .await?;
         stats.started_timeout += self
             .repo
-            .timeout_grading_tasks(&Status::STARTED, started_timeout_in_secs)
+            .timeout_grading_tasks(&GradingStatus::STARTED, started_timeout_in_secs)
             .await?;
 
         Ok(stats)
@@ -79,7 +79,7 @@ impl Service {
                 Ok(()) => {
                     Repository::update_grading_task_non_terminal_status_transact(
                         &task.uuid,
-                        &Status::ORDERED,
+                        &GradingStatus::ORDERED,
                         &mut *transaction,
                     )
                     .await?;

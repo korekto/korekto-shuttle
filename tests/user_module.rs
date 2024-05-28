@@ -241,10 +241,10 @@ async fn get_user_assignment_query() -> anyhow::Result<()> {
     let assignment_uuid = &module.assignments[0].uuid;
     let assignment: UserAssignmentResponse = service
         .repo
-        .get_assignment(&user, &module.uuid, assignment_uuid)
+        .get_assignment(&user, &module.uuid, assignment_uuid, 0)
         .await?
         .unwrap()
-        .into();
+        .try_into()?;
 
     pretty_assertions::assert_eq!(
         assignment,
@@ -263,6 +263,7 @@ async fn get_user_assignment_query() -> anyhow::Result<()> {
             .factor_percentage(ASSIGNMENT_STATES[0].factor)
             .normalized_grade(17.17)
             .locked(false)
+            .queue_due_to(0)
             .latest_run(
                 CompleteRunInfoResponseBuilder::default()
                     .short_commit_id("toto123")

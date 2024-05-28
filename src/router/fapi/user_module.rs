@@ -40,15 +40,19 @@ async fn get_assignment(
 ) -> Result<Json<UserAssignmentResponse>, StatusCode> {
     let assignment = state
         .service
-        .repo
-        .get_assignment(&user, &module_id, &assignment_id)
+        .get_assignment(
+            &user,
+            &module_id,
+            &assignment_id,
+            state.config.min_grading_interval_in_secs,
+        )
         .await
         .map_err(|err| {
             error!("get_assignment {err:#?}");
             StatusCode::INTERNAL_SERVER_ERROR
         })?
         .ok_or(StatusCode::NOT_FOUND)?;
-    Ok(Json(assignment.into()))
+    Ok(Json(assignment))
 }
 
 async fn get_module(
@@ -151,7 +155,7 @@ async fn sync_repo(
 ) -> Result<(), StatusCode> {
     state
         .service
-        .sync_repo(&user, &module_id, &assignment_id, &state.github_clients)
+        .sync_repo(&user, &module_id, &assignment_id, state.config.min_grading_interval_in_secs, &state.github_clients)
         .await
         .map_err(|err| {
             warn!(
