@@ -4,6 +4,7 @@ use axum_extra::extract::cookie::Key;
 use oauth2::basic::BasicClient;
 use oauth2::{AuthUrl, ClientId, ClientSecret, RedirectUrl, TokenUrl};
 use sqlx::PgPool;
+use std::num::NonZeroUsize;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -39,7 +40,8 @@ impl AppState {
 
         let github_clients = ClientCache::new(
             gh_app_client,
-            config.github_client_cache_size,
+            NonZeroUsize::new(config.github_client_cache_size)
+                .ok_or_else(|| anyhow!("Configured GITHUB_CLIENT_CACHE_SIZE must be > 0"))?,
             config.github_app_id,
         );
 
@@ -54,7 +56,10 @@ impl AppState {
 
         Ok(Self {
             config: config.clone(),
-            cookie_key: Key::derive_from(config.cookie_secret_key.as_ref()),
+            cookie_key: config
+                .cookie_secret_key
+                .clone()
+                .map_or_else(Key::generate, |src| Key::derive_from(src.as_ref())),
             oauth: OAuth::new(config)?,
             github_clients,
             service: Service::new(pool),

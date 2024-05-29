@@ -1,5 +1,10 @@
 #!/usr/bin/env -S just --justfile
 
+set dotenv-filename := '.env-just'
+
+smee_gh_app := env('SMEE_GH_APP', 'https://smee.io/WPgvb1aTMNPsas')
+smee_runner := env('SMEE_RUNNER', 'https://smee.io/hyZtaQlRMpJ1pEt')
+
 _default:
   @just --list --unsorted --justfile '{{justfile()}}'
 
@@ -50,10 +55,10 @@ install-smee:
   npm install -g smee-client
 
 start-smee-gh:
-  smee -u https://smee.io/WPgvb1aTMNPsas -t http://127.0.0.1:8000/webhook/github -p 3000
+  smee -u {{smee_gh_app}} -t http://127.0.0.1:8000/webhook/github -p 3000
 
 start-smee-runner:
-  smee -u https://smee.io/hyZtaQlRMpJ1pEt -t http://127.0.0.1:8000/webhook/github/runner -p 3001
+  smee -u {{smee_runner}} -t http://127.0.0.1:8000/webhook/github/runner -p 3001
 
 stop-smee-runner:
   docker rm $(docker stop smee-client-runner)
