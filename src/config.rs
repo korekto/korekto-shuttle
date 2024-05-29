@@ -5,6 +5,7 @@ use validator::Validate;
 pub struct Config {
     pub base_url: String,
     pub cookie_secret_key: Option<String>,
+    pub first_admin: Option<String>,
     pub github_app_id: u64,
     pub github_app_name: String,
     pub github_app_client_id: String,

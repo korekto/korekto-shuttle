@@ -19,6 +19,7 @@ The app in itself have the following configuration parameters:
 | Name                                |                                     | Description                                                                               | Example                               |
 |-------------------------------------|-------------------------------------|-------------------------------------------------------------------------------------------|---------------------------------------|
 | BASE_URL                            | Required                            | Used to compute callback urls (such as the one for oauth2 web flow)                       | http://localhost:8000                 |
+| FIRST_ADMIN                         | Optional                            | Provider login of the user to set admin on first connection                               | http://localhost:8000                 |
 | COOKIE_SECRET_KEY                   | Optional (defaults to a random one) | Use to cypher private cookies                                                             |                                       |
 | GITHUB_APP_ID                       | Required                            | ID of the GitHub app (1)                                                                  | 12345                                 |
 | GITHUB_APP_NAME                     | Required                            | Name of the GitHub app (1)                                                                | Korekto                               |
@@ -50,35 +51,37 @@ The app in itself have the following configuration parameters:
 This is a Rust project, using Docker for the PostgresSQL instance, and Shuttle as IFC environment.
 
 * Install Rust and its ecosystem if you have not already
-  * `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` cf https://rustup.rs/
+    * `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` cf https://rustup.rs/
 * Install Docker
 * Install Node (needed for building the frontend & using [smee](https://smee.io/))
-  * `curl https://get.volta.sh | bash` cf https://docs.volta.sh/guide/getting-started
-  * `volta install node@20`
+    * `curl https://get.volta.sh | bash` cf https://docs.volta.sh/guide/getting-started
+    * `volta install node@20`
 * Install Just
-  * `cargo install just` cf https://just.systems/man/en/chapter_4.html
+    * `cargo install just` cf https://just.systems/man/en/chapter_4.html
 * Install Shuttle
-  * `cargo install cargo-shuttle` cf https://docs.shuttle.rs/getting-started/installation
+    * `cargo install cargo-shuttle` cf https://docs.shuttle.rs/getting-started/installation
 
 * Clone and build
-  * `git clone git@github.com:korekto/korekto-shuttle.git`
-  * `git clone git@github.com:korekto/korekto-frontend.git`
-  * `cd korekto-shuttle`
-  * `./local_front.sh`
+    * `git clone git@github.com:korekto/korekto-shuttle.git`
+    * `git clone git@github.com:korekto/korekto-frontend.git`
+    * `cd korekto-shuttle`
+    * `./local_front.sh`
 
-* Create and fill the `Secrets.toml` file with expected [configuration](#Configuration) parameters, see [docs](https://docs.shuttle.rs/resources/shuttle-secrets)
+* Create and fill the `Secrets.toml` file with expected [configuration](#Configuration) parameters,
+  see [docs](https://docs.shuttle.rs/resources/shuttle-secrets)
 * Start smee for GitHub and runner webhooks
-  * `just install-smee`
-  * `just start-smee-gh`
-  * `just start-smee-runner`
+    * `just install-smee`
+    * `just start-smee-gh`
+    * `just start-smee-runner`
 
 * Start the app
-  * `clear && just run`
+    * `clear && just run`
 
 ## Deploy your own instance
 
 * Create an account on [shuttle](https://www.shuttle.rs/)
 * Create a file `Shuttle.toml` with the content:
+
 ```toml
 name = "my-project-name"
 ```

@@ -57,12 +57,7 @@ where
         let user = extract_user_from_cookie(parts, &app_state).await?;
         drop(app_state);
 
-        // TODO remove this lock after beta
-        if user.provider_login.ne("ledoyen") {
-            Err(AuthenticationRejection::AuthRedirect)
-        } else {
-            Ok(Self(user))
-        }
+        Ok(Self(user))
     }
 }
 
