@@ -154,7 +154,7 @@ impl From<Module> for TeacherModuleResponse {
             stop: value.stop,
             unlock_key: value.unlock_key,
             source_url: value.source_url,
-            assignments: value.assignments.vec_into(),
+            assignments: value.assignments.0.vec_into(),
         }
     }
 }

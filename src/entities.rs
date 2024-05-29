@@ -103,7 +103,7 @@ pub struct ModuleDesc {
     pub assignment_count: i64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(sqlx::FromRow, Debug, Clone)]
 pub struct Module {
     pub id: i32,
     pub uuid: String,
@@ -113,7 +113,7 @@ pub struct Module {
     pub stop: OffsetDateTime,
     pub unlock_key: String,
     pub source_url: String,
-    pub assignments: Vec<EmbeddedAssignmentDesc>,
+    pub assignments: Json<Vec<EmbeddedAssignmentDesc>>,
 }
 
 pub struct ModuleId {

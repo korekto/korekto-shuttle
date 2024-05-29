@@ -4,11 +4,13 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 --DROP TABLE IF EXISTS "user";
 --DROP TABLE IF EXISTS "unparseable_webhook";
 
--- DROP TABLE IF EXISTS "module" CASCADE;
--- DROP TABLE IF EXISTS "user_module";
-DROP TABLE IF EXISTS "grading_task";
-DROP TABLE IF EXISTS "user_assignment";
--- DROP TABLE IF EXISTS "assignment";
+--DROP TABLE IF EXISTS module CASCADE;
+--DROP TABLE IF EXISTS assignment;
+--DROP TABLE IF EXISTS user_module;
+--DROP TABLE IF EXISTS teacher_module;
+
+DROP TABLE IF EXISTS grading_task;
+DROP TABLE IF EXISTS user_assignment;
 
 CREATE TABLE IF NOT EXISTS "user" (
   id SERIAL PRIMARY KEY,
@@ -29,7 +31,7 @@ CREATE TABLE IF NOT EXISTS "user" (
   UNIQUE (first_name, last_name)
 );
 
-CREATE TABLE IF NOT EXISTS "module" (
+CREATE TABLE IF NOT EXISTS module (
   id SERIAL PRIMARY KEY,
   uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -41,7 +43,21 @@ CREATE TABLE IF NOT EXISTS "module" (
   unlock_key VARCHAR NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS "assignment" (
+CREATE TABLE IF NOT EXISTS teacher_module (
+  module_id integer NOT NULL,
+  teacher_id integer NOT NULL,
+  UNIQUE (module_id, teacher_id),
+  CONSTRAINT fk_teacher_module_module_id
+        FOREIGN KEY(module_id)
+        REFERENCES module(id)
+        ON DELETE CASCADE,
+  CONSTRAINT fk_teacher_module_teacher_id
+        FOREIGN KEY(teacher_id)
+        REFERENCES "user"(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS assignment (
   id SERIAL PRIMARY KEY,
   uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -62,7 +78,7 @@ CREATE TABLE IF NOT EXISTS "assignment" (
         ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS "unparseable_webhook" (
+CREATE TABLE IF NOT EXISTS unparseable_webhook (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   origin VARCHAR NOT NULL,
   event VARCHAR NOT NULL,
@@ -70,7 +86,7 @@ CREATE TABLE IF NOT EXISTS "unparseable_webhook" (
   error VARCHAR NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS "user_module" (
+CREATE TABLE IF NOT EXISTS user_module (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   user_id integer NOT NULL,
   module_id integer NOT NULL,
@@ -85,7 +101,7 @@ CREATE TABLE IF NOT EXISTS "user_module" (
         ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS "user_assignment" (
+CREATE TABLE IF NOT EXISTS user_assignment (
   id SERIAL PRIMARY KEY,
   uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -110,7 +126,7 @@ CREATE TABLE IF NOT EXISTS "user_assignment" (
         ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS "grading_task" (
+CREATE TABLE IF NOT EXISTS grading_task (
   id SERIAL PRIMARY KEY,
   uuid UUID DEFAULT gen_random_uuid() NOT NULL UNIQUE,
   user_assignment_id integer NOT NULL,

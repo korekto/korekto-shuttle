@@ -33,25 +33,30 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn get_modules(
-    _user: TeacherUser,
+    user: TeacherUser,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<TeacherModuleDescResponse>>, StatusCode> {
-    let modules = state.service.repo.find_modules().await.map_err(|err| {
-        error!("get_modules {err:#?}");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let modules = state
+        .service
+        .repo
+        .find_modules(&user.0)
+        .await
+        .map_err(|err| {
+            error!("get_modules {err:#?}");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     Ok(Json(modules.vec_into()))
 }
 
 async fn create_module(
-    _user: TeacherUser,
+    user: TeacherUser,
     State(state): State<AppState>,
     Json(module): Json<NewModule>,
 ) -> Result<Json<TeacherModuleResponse>, StatusCode> {
     let module = state
         .service
         .repo
-        .create_module(&module)
+        .create_module(&module, &user.0)
         .await
         .map_err(|err| {
             error!("create_module {err:#?}");
@@ -62,14 +67,14 @@ async fn create_module(
 }
 
 async fn get_module(
-    _user: TeacherUser,
+    user: TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
 ) -> Result<Json<TeacherModuleResponse>, StatusCode> {
     let module = state
         .service
         .repo
-        .find_module(&module_id)
+        .find_module(&module_id, &user.0)
         .await
         .map_err(|err| {
             error!("get_module {err:#?}");
@@ -80,7 +85,7 @@ async fn get_module(
 }
 
 async fn update_module(
-    _user: TeacherUser,
+    user: TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
     Json(module): Json<NewModule>,
@@ -88,7 +93,7 @@ async fn update_module(
     let module = state
         .service
         .repo
-        .update_module(&module_id, &module)
+        .update_module(&module_id, &module, &user.0)
         .await
         .map_err(|err| {
             error!("update_module {err:#?}");
@@ -99,14 +104,14 @@ async fn update_module(
 }
 
 async fn delete_modules(
-    _user: TeacherUser,
+    user: TeacherUser,
     State(state): State<AppState>,
     Json(module_ids): Json<Vec<String>>,
 ) -> Result<(), StatusCode> {
     state
         .service
         .repo
-        .delete_modules(&module_ids)
+        .delete_modules(&module_ids, &user.0)
         .await
         .map_err(|err| {
             error!("delete_modules {err:#?}");
@@ -117,7 +122,7 @@ async fn delete_modules(
 }
 
 async fn create_assignment(
-    _user: TeacherUser,
+    user: TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
     Json(assignment): Json<NewAssignment>,
@@ -125,7 +130,7 @@ async fn create_assignment(
     let assignment = state
         .service
         .repo
-        .create_assignment(&module_id, &assignment)
+        .create_assignment(&module_id, &assignment, &user.0)
         .await
         .map_err(|err| {
             error!("create_assignment {err:#?}");
@@ -136,14 +141,14 @@ async fn create_assignment(
 }
 
 async fn get_assignment(
-    _user: TeacherUser,
+    user: TeacherUser,
     State(state): State<AppState>,
     Path((module_id, assignment_id)): Path<(String, String)>,
 ) -> Result<Json<TeacherAssignmentResponse>, StatusCode> {
     let assignment = state
         .service
         .repo
-        .find_assignment(&module_id, &assignment_id)
+        .find_assignment(&module_id, &assignment_id, &user.0)
         .await
         .map_err(|err| {
             error!("get_assignment {err:#?}");
@@ -154,7 +159,7 @@ async fn get_assignment(
 }
 
 async fn update_assignment(
-    _user: TeacherUser,
+    user: TeacherUser,
     State(state): State<AppState>,
     Path((module_id, assignment_id)): Path<(String, String)>,
     Json(assignment): Json<NewAssignment>,
@@ -162,7 +167,7 @@ async fn update_assignment(
     let assignment = state
         .service
         .repo
-        .update_assignment(&module_id, &assignment_id, &assignment)
+        .update_assignment(&module_id, &assignment_id, &assignment, &user.0)
         .await
         .map_err(|err| {
             error!("update_assignment {err:#?}");
@@ -173,7 +178,7 @@ async fn update_assignment(
 }
 
 async fn delete_assignments(
-    _user: TeacherUser,
+    user: TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
     Json(assignment_ids): Json<Vec<String>>,
@@ -181,7 +186,7 @@ async fn delete_assignments(
     state
         .service
         .repo
-        .delete_assignments(&module_id, &assignment_ids)
+        .delete_assignments(&module_id, &assignment_ids, &user.0)
         .await
         .map_err(|err| {
             error!("delete_assignments {err:#?}");
