@@ -69,6 +69,7 @@ async fn setup_data(service: &Service) -> anyhow::Result<(User, Module)> {
                 .unlock_key("test")
                 .source_url("test")
                 .build()?,
+            &user,
         )
         .await?;
 
@@ -82,6 +83,7 @@ async fn setup_data(service: &Service) -> anyhow::Result<(User, Module)> {
                     .factor_percentage(assignment_state.factor)
                     .repository_name(assignment_state.name)
                     .build()?,
+                &user,
             )
             .await?;
 
@@ -117,7 +119,7 @@ async fn setup_data(service: &Service) -> anyhow::Result<(User, Module)> {
             .await?;
     }
 
-    let module = service.repo.find_module(&module_v0.uuid).await?;
+    let module = service.repo.find_module(&module_v0.uuid, &user).await?;
 
     Ok((user, module))
 }
@@ -202,6 +204,7 @@ async fn list_user_modules_gather_grades() -> anyhow::Result<()> {
                 .name("a0")
                 .factor_percentage(20)
                 .build()?,
+            &user,
         )
         .await?;
 
