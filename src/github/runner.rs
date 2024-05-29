@@ -47,8 +47,10 @@ impl Runner {
         let client = self.client.get_for_installation(self.installation_id)?;
         let slug = url_to_slug(&task.grader_url)
             .ok_or_else(|| anyhow!("Invalid grader URL: {}", &task.grader_url))?;
-        let original_callback_url =
-            format!("{}/webhook/github/runner", self.config.server_base_url());
+        let original_callback_url = format!(
+            "{}/webhook/github/runner",
+            self.config.runner_callback_base_url()
+        );
         let callback_url = self
             .config
             .github_runner_callback_url_override
