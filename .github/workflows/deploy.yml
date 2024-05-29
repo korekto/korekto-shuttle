@@ -40,6 +40,7 @@ jobs:
           no-test: 'true'
           secrets: |
             BASE_URL = 'https://korekto.shuttleapp.rs'
+            FIRST_ADMIN = 'ledoyen'
             GITHUB_APP_ID = '${{ secrets.APP_GITHUB_APP_ID }}'
             GITHUB_APP_NAME = 'korekto'
             GITHUB_APP_CLIENT_ID = '${{ secrets.APP_GITHUB_APP_CLIENT_ID }}'
