@@ -10,9 +10,21 @@ Then enter `just` to see the list of available recipes.
 
 ## Configuration
 
-The app requires a GitHub app (1) that users will install to grant permissions for reading their repositories.
-This GitHub app (1) also allows for the reception of webhook events to follow what is happening on the users side (push
-of new code for example).
+The app requires:
+
+* A `public` GitHub app (1) that users will install to grant permissions for reading their repositories.  
+  This GitHub app (1) also allows for the reception of webhook events to follow what is happening on the users side (
+  push of new code for example).  
+  This GitHub app (1) should have the following permissions:
+    * Repository > Actions: Read-only
+    * Repository > Contents: Read-only
+    * Repository > Issues: Read and write
+    * Repository > Metadata: Read-only
+* A more confidential GitHub app (2) installed on the runner repository to grant permission to trigger workflow runs.  
+  This GitHub app (1) should have the following permissions:
+    * Repository > Actions: Read and write
+    * Repository > Contents: Read-only
+    * Repository > Metadata: Read-only
 
 The app in itself have the following configuration parameters:
 
@@ -27,8 +39,10 @@ The app in itself have the following configuration parameters:
 | GITHUB_APP_CLIENT_SECRET            | Required                            | Client Secret of the GitHub app (1)                                                       | ad45f12ccb5687                        |
 | GITHUB_APP_PRIVATE_KEY              | Required                            | Private Key of the GitHub app (1)                                                         | -----BEGIN RSA PRIVATE KEY----- (...) |
 | GITHUB_APP_WEBHOOK_SECRET           | Required                            | Secret needed to verify GitHub app (1) webhooks origin                                    | ad45f12ccb5687                        |
+| GITHUB_RUNNER_APP_ID                | Required                            | ID of the GitHub app (2)                                                                  | 12345                                 |
+| GITHUB_RUNNER_APP_PRIVATE_KEY       | Required                            | Private Key of the GitHub app (2)                                                         | -----BEGIN RSA PRIVATE KEY----- (...) |
 | GITHUB_RUNNER_REPO_SLUG             | Required                            | GitHub repository slug hosting the grading job                                            | some_org/some_repo                    |
-| GITHUB_RUNNER_INSTALLATION_ID       | Required                            | Installation ID of the GitHub app (1) for the runner repository                           | 12345678                              |
+| GITHUB_RUNNER_INSTALLATION_ID       | Required                            | Installation ID of the GitHub app (2) on the runner repository                            | 12345678                              |
 | GITHUB_RUNNER_CALLBACK_URL_OVERRIDE | Optional (defaults to $BASE_URL)    | Used to compute callback urls for runner jobs                                             | https://smee.io/machin                |
 | GITHUB_RUNNER_WORKFLOW_ID           | Optional (defaults to grade.yml)    | Name of the workflow to trigger for grading a user assignment                             | something.yml                         |
 | GITHUB_CLIENT_CACHE_SIZE            | Optional (defaults to 50)           | Size of the LRU cache hosting GitHub client instances                                     | 20                                    |
@@ -37,10 +51,6 @@ The app in itself have the following configuration parameters:
 | GRADING_ORDERED_TIMEOUT_IN_SECS     | Optional (defaults to 5 * 60)       | Duration after which an `ORDERED` grading job with no received `STARTED` event times out  | 180                                   |
 | GRADING_STARTED_TIMEOUT_IN_SECS     | Optional (defaults to 15 * 60)      | Duration after which a `STARTED` grading job with no received `COMPLETED` event times out | 600                                   |
 | MAX_PARALLEL_GRADINGS               | Optional (defaults to 3)            | Maximum parallel grading jobs running in the Github runner                                |                                       |
-
-## Configuration of the GitHub app (1)
-
-// TODO
 
 ## Configuration of the GitHub runner
 

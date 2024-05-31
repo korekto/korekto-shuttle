@@ -1,4 +1,3 @@
-use crate::config::Config;
 use anyhow::anyhow;
 use octocrab::Octocrab;
 use std::fmt;
@@ -11,11 +10,11 @@ pub mod client_cache;
 pub(crate) mod runner;
 pub mod webhook_models;
 
-pub fn create_gh_app_client(config: &Config) -> anyhow::Result<Octocrab> {
+pub fn create_gh_app_client(app_id: u64, key: &str) -> anyhow::Result<Octocrab> {
     Ok(Octocrab::builder()
         .app(
-            config.github_app_id.into(),
-            jsonwebtoken::EncodingKey::from_rsa_pem(config.github_app_private_key.as_bytes())?,
+            app_id.into(),
+            jsonwebtoken::EncodingKey::from_rsa_pem(key.as_bytes())?,
         )
         .build()?)
 }

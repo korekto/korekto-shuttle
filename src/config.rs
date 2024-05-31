@@ -15,6 +15,8 @@ pub struct Config {
     #[serde(default = "default_github_client_cache_size")]
     #[validate(range(min = 1))]
     pub github_client_cache_size: usize,
+    pub github_runner_app_id: u64,
+    pub github_runner_app_private_key: String,
     pub github_runner_repo_slug: String,
     #[serde(default = "default_github_runner_workflow_id")]
     pub github_runner_workflow_id: String,

@@ -47,5 +47,7 @@ jobs:
             GITHUB_APP_CLIENT_SECRET = '${{ secrets.APP_GITHUB_APP_CLIENT_SECRET }}'
             GITHUB_APP_PRIVATE_KEY = \"\"\"${{ secrets.APP_GITHUB_APP_PRIVATE_KEY }}\"\"\"
             GITHUB_APP_WEBHOOK_SECRET = '${{ secrets.APP_GITHUB_APP_WEBHOOK_SECRET }}'
+            GITHUB_RUNNER_APP_ID = '${{ secrets.APP_GITHUB_RUNNER_APP_ID }}'
+            GITHUB_RUNNER_APP_PRIVATE_KEY = \"\"\"${{ secrets.APP_GITHUB_RUNNER_APP_PRIVATE_KEY }}\"\"\"
             GITHUB_RUNNER_REPO_SLUG = 'lernejo/korekto-runner'
             GITHUB_RUNNER_INSTALLATION_ID = '${{ secrets.APP_GITHUB_RUNNER_INSTALLATION_ID }}'
