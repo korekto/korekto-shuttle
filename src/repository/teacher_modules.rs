@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use tracing::{debug, error};
 
 use crate::entities;
-use crate::entities::{Module, NewModule, User};
+use crate::entities::{Module, NewModule, StudentGrades, User};
 
 use super::Repository;
 
@@ -190,5 +190,55 @@ impl Repository {
             }
             Ok(query_result) => Ok(query_result.rows_affected()),
         }
+    }
+
+    pub async fn get_grades(
+        &self,
+        uuid: &str,
+        teacher: &User,
+    ) -> anyhow::Result<Vec<StudentGrades>> {
+        const QUERY: &str = "\
+            WITH enhanced_assignment AS (
+                SELECT
+                  a.id,
+                  a.module_id,
+                  a.type,
+                  a.name,
+                  a.description,
+                  a.factor_percentage,
+                  COALESCE(ua.normalized_grade, 0) as grade,
+                  ua.user_id
+                FROM assignment a
+                LEFT JOIN user_assignment ua ON ua.assignment_id = a.id
+                ORDER BY a.id
+            )
+            SELECT
+              u.first_name,
+              u.last_name,
+              u.school_email,
+              json_agg(
+                json_build_object(
+                  'type', ea.type,
+                  'name', ea.name,
+                  'description', ea.description,
+                  'factor_percentage', ea.factor_percentage,
+                  'grade', ea.grade
+                ) ORDER BY ea.id ASC
+              ) as grades,
+              COALESCE(SUM(ea.grade * ea.factor_percentage / 100), 0)::real as total
+            FROM \"user\" u
+            JOIN user_module um ON um.user_id = u.id
+            JOIN module m ON m.id = um.module_id
+            JOIN enhanced_assignment ea ON ea.module_id = m.id AND (ea.user_id = u.id OR ea.user_id IS NULL)
+            WHERE m.uuid::varchar = $1
+            GROUP BY u.id
+        ";
+
+        sqlx::query_as::<_, StudentGrades>(QUERY)
+            .bind(uuid)
+            .bind(teacher.id)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|err| anyhow!("get_grades(uuid={uuid}, teacher={teacher}): {:?}", &err))
     }
 }

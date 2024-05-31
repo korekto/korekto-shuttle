@@ -1,7 +1,8 @@
 use crate::entities;
 use crate::entities::{
-    Assignment, Details, EmbeddedAssignmentDesc, GradingTask, InstantGrade, Module, ModuleDesc,
-    UnparseableWebhook, UserAssignment, UserAssignmentDesc, UserModule, UserModuleDesc,
+    Assignment, AssignmentGrade, Details, EmbeddedAssignmentDesc, GradingTask, InstantGrade,
+    Module, ModuleDesc, StudentGrades, UnparseableWebhook, UserAssignment, UserAssignmentDesc,
+    UserModule, UserModuleDesc,
 };
 use crate::repository::grading_task::GradingStatus;
 use crate::service::webhook_models::RunnerGradePart;
@@ -99,9 +100,7 @@ impl From<UserModuleDesc> for UserModuleDescResponse {
             stop: value.stop,
             linked_repo_count: value.linked_repo_count,
             assignment_count: value.assignment_count,
-            grade: Decimal::from_f32_retain(value.grade)
-                .unwrap_or_default()
-                .round_dp(2),
+            grade: to_decimal(value.grade),
             latest_update: value.latest_update,
         }
     }
@@ -353,9 +352,7 @@ impl From<UserAssignmentDesc> for UserAssignmentDescResponse {
             a_type: value.a_type,
             factor_percentage: value.factor_percentage,
             locked: false,
-            grade: Decimal::from_f32_retain(value.grade)
-                .unwrap_or_default()
-                .round_dp(2),
+            grade: to_decimal(value.grade),
             repo_linked: value.repo_linked,
             repository_name: value.repository_name,
         }
@@ -585,4 +582,63 @@ impl From<GradingTask> for GradingTaskResponse {
             repository_name: value.repository_name,
         }
     }
+}
+
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct ModuleGradesResponse {
+    pub assignments: Vec<GradeAssignmentResponse>,
+    pub students: Vec<StudentGradesResponse>,
+}
+
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct GradeAssignmentResponse {
+    short_name: String,
+    name: String,
+    description: String,
+    a_type: String,
+    factor_percentage: i32,
+}
+
+impl From<(usize, &AssignmentGrade)> for GradeAssignmentResponse {
+    fn from(value: (usize, &AssignmentGrade)) -> Self {
+        let short_name = if value.1.a_type == "EXERCISE" {
+            format!("Ex {}", value.0 + 1)
+        } else {
+            "Project".to_string()
+        };
+        Self {
+            short_name,
+            name: value.1.name.clone(),
+            description: value.1.description.clone(),
+            a_type: value.1.a_type.clone(),
+            factor_percentage: value.1.factor_percentage,
+        }
+    }
+}
+
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct StudentGradesResponse {
+    first_name: String,
+    last_name: String,
+    school_email: String,
+    grades: Vec<Decimal>,
+    total: Decimal,
+}
+
+impl From<StudentGrades> for StudentGradesResponse {
+    fn from(value: StudentGrades) -> Self {
+        Self {
+            first_name: value.first_name,
+            last_name: value.last_name,
+            school_email: value.school_email,
+            grades: value.grades.0.iter().map(|g| to_decimal(g.grade)).collect(),
+            total: to_decimal(value.total),
+        }
+    }
+}
+
+fn to_decimal(value: f32) -> Decimal {
+    Decimal::from_f32_retain(value)
+        .unwrap_or_default()
+        .round_dp(2)
 }

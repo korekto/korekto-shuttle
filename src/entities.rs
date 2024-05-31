@@ -350,3 +350,22 @@ pub struct GradingMetadata {
     pub commit_url: String,
     pub full_log_url: String,
 }
+
+#[derive(sqlx::FromRow, Debug, Clone)]
+pub struct StudentGrades {
+    pub first_name: String,
+    pub last_name: String,
+    pub school_email: String,
+    pub grades: Json<Vec<AssignmentGrade>>,
+    pub total: f32,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct AssignmentGrade {
+    #[serde(rename = "type")]
+    pub a_type: String,
+    pub name: String,
+    pub description: String,
+    pub grade: f32,
+    pub factor_percentage: i32,
+}
