@@ -8,7 +8,8 @@ use http::StatusCode;
 use tracing::error;
 
 use crate::service::dtos::{
-    TeacherAssignmentResponse, TeacherModuleDescResponse, TeacherModuleResponse, VecInto,
+    ModuleGradesResponse, TeacherAssignmentResponse, TeacherModuleDescResponse,
+    TeacherModuleResponse, VecInto,
 };
 use crate::{
     entities::{NewAssignment, NewModule},
@@ -26,6 +27,7 @@ pub fn router() -> Router<AppState> {
             "/module/:module_id/assignment",
             post(create_assignment).delete(delete_assignments),
         )
+        .route("/module/:module_id/grade", get(get_grades))
         .route(
             "/module/:module_id/assignment/:assignment_id",
             get(get_assignment).put(update_assignment),
@@ -119,6 +121,23 @@ async fn delete_modules(
         })?;
 
     Ok(())
+}
+
+async fn get_grades(
+    user: TeacherUser,
+    State(state): State<AppState>,
+    Path(module_id): Path<String>,
+) -> Result<Json<ModuleGradesResponse>, StatusCode> {
+    Ok(Json(
+        state
+            .service
+            .get_grades(&module_id, &user.0)
+            .await
+            .map_err(|err| {
+                error!("get_grades {err:#?}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?,
+    ))
 }
 
 async fn create_assignment(
