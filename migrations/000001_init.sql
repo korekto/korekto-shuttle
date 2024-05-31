@@ -1,13 +1,13 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
---DROP TABLE IF EXISTS "user";
---DROP TABLE IF EXISTS "unparseable_webhook";
+DROP TABLE IF EXISTS "user";
+DROP TABLE IF EXISTS "unparseable_webhook";
 
---DROP TABLE IF EXISTS module CASCADE;
---DROP TABLE IF EXISTS assignment;
---DROP TABLE IF EXISTS user_module;
---DROP TABLE IF EXISTS teacher_module;
+DROP TABLE IF EXISTS module CASCADE;
+DROP TABLE IF EXISTS assignment;
+DROP TABLE IF EXISTS user_module;
+DROP TABLE IF EXISTS teacher_module;
 
 DROP TABLE IF EXISTS grading_task;
 DROP TABLE IF EXISTS user_assignment;
