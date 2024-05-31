@@ -1,10 +1,10 @@
 use crate::config::Config;
 use crate::entities::GitHubGradingTask;
-use crate::github::client_cache::ClientCache;
 use crate::github::url_to_slug;
 use anyhow::anyhow;
 use jsonwebtoken::jwk::{AlgorithmParameters, JwkSet};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use octocrab::Octocrab;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use time::OffsetDateTime;
@@ -13,8 +13,7 @@ use time::OffsetDateTime;
 pub struct Runner {
     org_name: String,
     repo_name: String,
-    installation_id: u64,
-    client: ClientCache,
+    client: Octocrab,
     config: Config,
     jwk_set: JwkSet,
 }
@@ -23,8 +22,7 @@ impl Runner {
     pub async fn new(
         org_name: String,
         repo_name: String,
-        installation_id: u64,
-        client: ClientCache,
+        client: Octocrab,
         config: Config,
     ) -> anyhow::Result<Self> {
         let raw_jwk_set =
@@ -36,7 +34,6 @@ impl Runner {
         Ok(Self {
             org_name,
             repo_name,
-            installation_id,
             client,
             config,
             jwk_set,
@@ -44,7 +41,6 @@ impl Runner {
     }
 
     pub async fn send_grading_command(&self, task: &GitHubGradingTask) -> anyhow::Result<()> {
-        let client = self.client.get_for_installation(self.installation_id)?;
         let slug = url_to_slug(&task.grader_url)
             .ok_or_else(|| anyhow!("Invalid grader URL: {}", &task.grader_url))?;
         let original_callback_url = format!(
@@ -56,8 +52,7 @@ impl Runner {
             .github_runner_callback_url_override
             .as_deref()
             .unwrap_or(&original_callback_url);
-        client
-            .0
+        self.client
             .actions()
             .create_workflow_dispatch(
                 &self.org_name,

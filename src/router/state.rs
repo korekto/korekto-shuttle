@@ -32,27 +32,28 @@ impl FromRef<AppState> for Key {
 
 impl AppState {
     pub async fn new(config: &Config, pool: PgPool) -> anyhow::Result<Self> {
-        let gh_app_client = github::create_gh_app_client(config)?;
         let instance_secret = Uuid::new_v4().to_string();
         tracing::info!("Instance secret: {}", &instance_secret);
 
         let slug = GitRepoSlug::from_str(&config.github_runner_repo_slug)?;
 
+        let gh_runner_app_client = github::create_gh_app_client(
+            config.github_runner_app_id,
+            &config.github_runner_app_private_key,
+        )?;
+        let runner_client =
+            gh_runner_app_client.installation(config.github_runner_installation_id.into());
+
+        let gh_runner = Runner::new(slug.org, slug.repo, runner_client, config.clone()).await?;
+
+        let gh_app_client =
+            github::create_gh_app_client(config.github_app_id, &config.github_app_private_key)?;
         let github_clients = ClientCache::new(
             gh_app_client,
             NonZeroUsize::new(config.github_client_cache_size)
                 .ok_or_else(|| anyhow!("Configured GITHUB_CLIENT_CACHE_SIZE must be > 0"))?,
             config.github_app_id,
         );
-
-        let gh_runner = Runner::new(
-            slug.org,
-            slug.repo,
-            config.github_runner_installation_id,
-            github_clients.clone(),
-            config.clone(),
-        )
-        .await?;
 
         Ok(Self {
             config: config.clone(),
