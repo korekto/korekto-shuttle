@@ -1,3 +1,4 @@
+use axum::extract::OriginalUri;
 use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts},
@@ -10,6 +11,7 @@ use axum_extra::extract::{
     cookie::{Cookie, SameSite},
     CookieJar, PrivateCookieJar,
 };
+use http::uri::PathAndQuery;
 use http::StatusCode;
 use time::Duration;
 use tracing::warn;
@@ -103,6 +105,12 @@ async fn extract_user_from_cookie(
     parts: &mut Parts,
     app_state: &AppState,
 ) -> Result<User, AuthenticationRejection> {
+    let query = parts
+        .extensions
+        .get::<OriginalUri>()
+        .and_then(|ou| ou.0.path_and_query())
+        .cloned();
+
     #[allow(clippy::expect_used)]
     let cookies = parts
         .extract_with_state::<PrivateCookieJar, AppState>(app_state)
@@ -111,12 +119,12 @@ async fn extract_user_from_cookie(
 
     let cookie = cookies
         .get(SESSION_ID_COOKIE)
-        .ok_or(AuthenticationRejection::AuthRedirect)?;
+        .ok_or(AuthenticationRejection::AuthRedirect(query.clone()))?;
 
     let user_id = cookie
         .value()
         .parse::<i32>()
-        .map_err(|_| AuthenticationRejection::AuthRedirect)?;
+        .map_err(|_| AuthenticationRejection::AuthRedirect(query.clone()))?;
 
     let user = app_state
         .service
@@ -124,21 +132,31 @@ async fn extract_user_from_cookie(
         .await
         .ok_or_else(|| {
             warn!("User with valid cookie, but not found in Database");
-            AuthenticationRejection::AuthRedirect
+            AuthenticationRejection::AuthRedirect(query.clone())
         })?;
 
     Ok(user)
 }
 
 pub enum AuthenticationRejection {
-    AuthRedirect,
+    AuthRedirect(Option<PathAndQuery>),
     NeedsAppropriateRight,
 }
 
 impl IntoResponse for AuthenticationRejection {
     fn into_response(self) -> Response {
         match self {
-            Self::AuthRedirect => Redirect::temporary("/").into_response(),
+            Self::AuthRedirect(Some(path_and_query)) => (
+                CookieJar::new().add(
+                    Cookie::build(("auth_origin", path_and_query.to_string()))
+                        .path("/")
+                        .same_site(SameSite::Lax)
+                        .max_age(Duration::minutes(5)),
+                ),
+                Redirect::to("/"),
+            )
+                .into_response(),
+            Self::AuthRedirect(None) => Redirect::temporary("/").into_response(),
             Self::NeedsAppropriateRight => StatusCode::FORBIDDEN.into_response(),
         }
     }
