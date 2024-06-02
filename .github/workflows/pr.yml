@@ -2,12 +2,12 @@ name: 🏗️ Build and test
 
 on:
   pull_request:
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -D warnings
   RUST_BACKTRACE: full
-  RUST_TOOLCHAIN: 1.72.1
 
 jobs:
   rustfmt:

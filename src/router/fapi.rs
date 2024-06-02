@@ -5,18 +5,20 @@ use axum::{
     Json, Router,
 };
 use http::StatusCode;
-use tracing::{error, warn};
+use tracing::error;
 
 use crate::router::auth::AuthenticatedUser;
 use crate::router::state::AppState;
 
 mod admin;
 mod teacher;
+mod user_module;
 
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/user/self", get(get_self).put(update_self))
         .route("/settings/redeem_code", patch(redeem_code))
+        .nest("/module", user_module::router())
         .nest("/admin", admin::router())
         .nest("/teacher", teacher::router())
         .fallback(crate::router::fallback)
@@ -47,29 +49,13 @@ async fn update_self(
 }
 
 async fn redeem_code(
-    user: AuthenticatedUser,
-    State(state): State<AppState>,
-    payload: String,
+    _user: AuthenticatedUser,
+    State(_state): State<AppState>,
+    _code: String,
 ) -> Result<(), StatusCode> {
     tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-    if state.instance_secret.eq(&payload) {
-        state
-            .service
-            .repo
-            .set_user_admin(&user.0.id)
-            .await
-            .map_err(|err| {
-                error!("{err}");
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
-        Ok(())
-    } else {
-        warn!(
-            "Provided code was: {}, but expected: {}",
-            &payload, state.instance_secret
-        );
-        Err(StatusCode::FORBIDDEN)
-    }
+    // This may be used later
+    Err(StatusCode::FORBIDDEN)
 }
 
 #[derive(Debug, serde::Serialize)]

@@ -1,0 +1,13 @@
+{
+  "status": "failure",
+  "student_login": "ledoyen",
+  "grader_repo": "lernejo/korekto-java-basics-grader",
+  "task_id": "518e2eba-8d12-4833-ab5c-460b0e4a9fa6",
+  "full_log_url": "https://github.com/lernejo/korekto-runner/actions/runs/9255315322",
+  "metadata": {
+    "commit_id": "cb2fa5425250371d70a9d06f4fb7202cd62b7738",
+    "short_commit_id": "cb2fa54",
+    "commit_url": "https://github.com/ledoyen/java_exercise_1/commit/cb2fa5425250371d70a9d06f4fb7202cd62b7738"
+  }
+}
+

@@ -43,6 +43,7 @@ pub async fn gh_login_start(
     (
         jar.add(
             Cookie::build((GH_STATE_COOKIE, csrf_state.secret().clone()))
+                .path("/")
                 .max_age(GH_STATE_COOKIE_DURATION)
                 .same_site(SameSite::Lax),
         ),
@@ -133,6 +134,11 @@ async fn decide_user_flow(
         .repo
         .upsert_user(&(token, user_logged).try_into()?)
         .await?;
+    if let Some(first_admin) = &state.config.first_admin {
+        if first_admin == &user.provider_login {
+            state.service.repo.set_user_admin(user.id).await?;
+        }
+    }
     if user.installation_id.is_none() {
         let installation_url = format!(
             "https://github.com/apps/{}/installations/new",
