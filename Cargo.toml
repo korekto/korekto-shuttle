@@ -12,9 +12,9 @@ tests-with-resources = []
 tests-with-docker = []
 
 [dependencies]
-shuttle-runtime = "0.43.0"
-shuttle-axum = "0.43.0"
-shuttle-shared-db = { version = "0.43.0", features = ["postgres", "sqlx"] }
+shuttle-runtime = "0.45.0"
+shuttle-axum = "0.45.0"
+shuttle-shared-db = { version = "0.45.0", features = ["postgres", "sqlx"] }
 
 axum = {version = "0.7.5"}
 axum-extra = { version = "0.9.3", features = ["cookie-private", "cookie-key-expansion", "typed-header"] }
@@ -30,6 +30,7 @@ tower = "0.4.13"
 tower-http = { version = "0.5.2", features = ["fs"] }
 tower-service = "0.3"
 http = "1.1.0"
+form_urlencoded = "1.2.1"
 
 anyhow = "1.0.82"
 oauth2 = "4.4.2"

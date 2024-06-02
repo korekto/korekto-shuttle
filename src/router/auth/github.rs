@@ -43,6 +43,7 @@ pub async fn gh_login_start(
     (
         jar.add(
             Cookie::build((GH_STATE_COOKIE, csrf_state.secret().clone()))
+                .path("/")
                 .max_age(GH_STATE_COOKIE_DURATION)
                 .same_site(SameSite::Lax),
         ),
