@@ -26,4 +26,11 @@ impl Repository {
         sqlx::query(QUERY).execute(&self.pool).await?;
         Ok(())
     }
+
+    pub async fn drop_table(&self, table_name: &str) -> anyhow::Result<()> {
+        let query = format!("DROP TABLE IF EXISTS {table_name} CASCADE");
+
+        sqlx::query(&query).execute(&self.pool).await?;
+        Ok(())
+    }
 }

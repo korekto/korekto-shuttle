@@ -1,7 +1,7 @@
 use axum::extract::Query;
 use axum::{
     extract::State,
-    routing::{get, patch},
+    routing::{delete, get, patch},
     Json, Router,
 };
 use http::StatusCode;
@@ -18,7 +18,9 @@ use crate::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
-        .route("/table", get(get_tables))
+        .route("/db/table", get(get_tables).delete(drop_table))
+        .route("/db/migrations", delete(rerun_only_migrations))
+        .route("/db", delete(recreate_db))
         .route("/user", get(get_users).delete(delete_users))
         .route("/teacher", patch(set_users_teacher))
         .route(
@@ -39,6 +41,46 @@ async fn get_tables(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     Ok(Json(tables))
+}
+
+async fn rerun_only_migrations(
+    _user: AdminUser,
+    State(state): State<AppState>,
+) -> Result<(), (StatusCode, Json<String>)> {
+    rerun_migrations(false, &state)
+        .await
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))
+}
+
+async fn drop_table(
+    _user: AdminUser,
+    State(state): State<AppState>,
+    table_name: String,
+) -> Result<(), (StatusCode, Json<String>)> {
+    state
+        .service
+        .repo
+        .drop_table(&table_name)
+        .await
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))
+}
+
+async fn recreate_db(
+    _user: AdminUser,
+    State(state): State<AppState>,
+) -> Result<(), (StatusCode, Json<String>)> {
+    rerun_migrations(true, &state)
+        .await
+        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))
+}
+
+async fn rerun_migrations(wipe_db: bool, state: &AppState) -> anyhow::Result<()> {
+    if wipe_db {
+        state.service.repo.wipe_database().await?;
+    }
+    state.service.repo.reset_migrations().await?;
+    state.service.repo.run_migrations().await?;
+    Ok(())
 }
 
 async fn get_users(
