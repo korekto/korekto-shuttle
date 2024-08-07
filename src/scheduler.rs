@@ -36,10 +36,12 @@ impl Scheduler {
                 &self.state.gh_runner,
             )
             .await?;
-        info!(
-            "[scheduler] Ticking, {stats} (min queue time={} sec)",
-            self.state.config.min_grading_interval_in_secs
-        );
+        if stats.total() > 0 {
+            info!(
+                "[scheduler] Ticking, {stats} (min queue time={} sec)",
+                self.state.config.min_grading_interval_in_secs
+            );
+        }
         Ok(())
     }
 }

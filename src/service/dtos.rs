@@ -428,8 +428,32 @@ impl TryFrom<UserAssignment> for UserAssignmentResponse {
     type Error = anyhow::Error;
 
     fn try_from(value: UserAssignment) -> Result<Self, Self::Error> {
+        fn capitalize(s: &str) -> String {
+            let lowered = s.to_lowercase();
+            let mut c = lowered.chars();
+            c.next().map_or_else(String::new, |f| {
+                f.to_uppercase().collect::<String>() + c.as_str()
+            })
+        }
+        fn gh_url_encode_description(a_type: &str, desc: &str) -> String {
+            format!("🎓 {}: {}", capitalize(a_type), desc).replace(' ', "+")
+        }
+
         let status = compute_status(&value);
         let ongoing_run = compute_ongoing_run(&value);
+        let repository_url = if value.repo_linked {
+            format!(
+                "https://github.com/{}/{}",
+                &value.user_provider_login, &value.repository_name
+            )
+        } else {
+            format!(
+                "https://github.com/new?name={}&owner={}&visibility=private&description={}",
+                &value.repository_name,
+                &value.user_provider_login,
+                gh_url_encode_description(&value.a_type, &value.description)
+            )
+        };
         Ok(Self {
             id: value.uuid,
             name: value.name,
@@ -442,10 +466,7 @@ impl TryFrom<UserAssignment> for UserAssignmentResponse {
             status,
             queue_due_to: value.queue_due_to,
             repo_linked: value.repo_linked,
-            repository_url: format!(
-                "https://github.com/{}/{}",
-                &value.user_provider_login, &value.repository_name
-            ),
+            repository_url,
             repository_name: value.repository_name,
             subject_url: value.subject_url,
             grader_url: value.grader_url,

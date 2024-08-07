@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Shuttle DB",
+      "Group": "Server Group 1",
+      "Port": 21191,
+      "Username": "postgres",
+      "Host": "host.docker.internal",
+      "SSLMode": "prefer",
+      "MaintenanceDB": "korekto"
+    }
+  }
+}

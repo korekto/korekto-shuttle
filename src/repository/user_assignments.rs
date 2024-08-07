@@ -107,10 +107,10 @@ impl Repository {
                   GREATEST(EXTRACT(EPOCH FROM age(ua.graded_last_at + interval '1 seconds' * $4, NOW()))::integer, 0)
                 END queue_due_to
             FROM assignment a
-            INNER JOIN module m ON m.id = a.module_id
-            INNER JOIN user_module um ON um.module_id = m.id
-            INNER JOIN \"user\" u ON u.id = um.user_id
-            LEFT JOIN user_assignment ua ON ua.assignment_id = a.id
+            JOIN module m ON m.id = a.module_id
+            JOIN user_module um ON um.module_id = m.id
+            JOIN \"user\" u ON u.id = um.user_id
+            LEFT JOIN user_assignment ua ON ua.assignment_id = a.id AND ua.user_id = u.id
             LEFT JOIN grading_task gt ON gt.user_assignment_id = ua.id
             WHERE u.id = $1
               AND m.uuid::varchar = $2
