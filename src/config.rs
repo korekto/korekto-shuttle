@@ -1,7 +1,7 @@
 use shuttle_runtime::SecretStore;
 use validator::Validate;
 
-#[derive(serde::Deserialize, Clone, validator::Validate)]
+#[derive(serde::Deserialize, Clone, validator::Validate, Debug)]
 pub struct Config {
     pub base_url: String,
     pub cookie_secret_key: Option<String>,

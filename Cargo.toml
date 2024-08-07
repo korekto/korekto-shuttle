@@ -38,7 +38,7 @@ time = { version = "0.3.36", features = ["serde"] }
 serde = "1.0.198"
 serde_json = "1.0.116"
 lru = "0.12.3"
-octocrab = "0.38.0"
+octocrab = "0.39.0"
 jsonwebtoken = "9.3.0"
 uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 hmac = "0.12.1"
@@ -57,3 +57,6 @@ derive_builder = { version = "0.20.0", optional = true }
 korekto = { path = ".", features = ["automatic_test_feature"] }
 pretty_assertions = "1.4.0"
 assert_matches2 = "0.1.2"
+
+[profile.release]
+debug = true

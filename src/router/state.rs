@@ -41,10 +41,18 @@ impl AppState {
             config.github_runner_app_id,
             &config.github_runner_app_private_key,
         )?;
+
         let runner_client =
             gh_runner_app_client.installation(config.github_runner_installation_id.into());
 
-        let gh_runner = Runner::new(slug.org, slug.repo, runner_client, config.clone()).await?;
+        let gh_runner = Runner::new(
+            slug.org,
+            slug.repo,
+            gh_runner_app_client,
+            runner_client,
+            config.clone(),
+        )
+        .await?;
 
         let gh_app_client =
             github::create_gh_app_client(config.github_app_id, &config.github_app_private_key)?;
