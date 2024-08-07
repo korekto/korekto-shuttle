@@ -78,7 +78,7 @@ pub async fn gh_login_authorized(
                     let user_flow = decide_user_flow(&token, &user_logged, &state).await;
                     match user_flow {
                         Err(err) => {
-                            error!("Unexpected error: {err})");
+                            error!("Unexpected error: {err:?})");
                             // TODO maybe some 500 page with info
                             (jar, Ok(Redirect::to("/")))
                         }

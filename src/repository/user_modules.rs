@@ -23,9 +23,10 @@ const MATCHING_ASSIGNMENTS_CTE: &str = "\
             COALESCE(ua.normalized_grade, 0) as grade,
             ua.updated_at
           FROM assignment a
-          LEFT JOIN user_assignment ua ON ua.assignment_id = a.id
-          LEFT JOIN \"user\" u ON u.id = ua.user_id
-          WHERE u.id = $1 OR u.id IS NULL
+          JOIN user_module um ON um.module_id = a.module_id
+		  JOIN \"user\" u ON u.id = um.user_id
+          LEFT JOIN user_assignment ua ON ua.assignment_id = a.id AND ua.user_id = u.id
+          WHERE u.id = $1
           ORDER BY a.id asc
         )
     ";
@@ -105,7 +106,7 @@ impl Repository {
             WITH {MATCHING_ASSIGNMENTS_CTE}
             SELECT
                 m.id,
-                m.uuid::varchar as \"uuid\",
+                m.uuid::varchar as uuid,
                 m.name,
                 m.description,
                 m.start,
@@ -113,7 +114,7 @@ impl Repository {
                 m.source_url,
                 MAX(ma.updated_at) as latest_update,
                 coalesce(json_agg(to_jsonb(ma.*) ORDER BY ma.id asc) FILTER (WHERE ma.id IS NOT NULL), '[]'::json) AS assignments
-            FROM \"module\" m
+            FROM module m
             INNER JOIN user_module um ON um.module_id = m.id
             LEFT JOIN matching_assignment ma ON ma.module_id = m.id
             WHERE um.user_id = $1

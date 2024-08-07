@@ -207,9 +207,11 @@ impl Repository {
                   a.description,
                   a.factor_percentage,
                   COALESCE(ua.normalized_grade, 0) as grade,
-                  ua.user_id
+                  u.id as user_id
                 FROM assignment a
-                LEFT JOIN user_assignment ua ON ua.assignment_id = a.id
+                JOIN user_module um ON um.module_id = a.module_id
+				JOIN \"user\" u ON u.id = um.user_id
+                LEFT JOIN user_assignment ua ON ua.assignment_id = a.id AND ua.user_id = u.id
                 ORDER BY a.id
             )
             SELECT
@@ -229,7 +231,7 @@ impl Repository {
             FROM \"user\" u
             JOIN user_module um ON um.user_id = u.id
             JOIN module m ON m.id = um.module_id
-            JOIN enhanced_assignment ea ON ea.module_id = m.id AND (ea.user_id = u.id OR ea.user_id IS NULL)
+            JOIN enhanced_assignment ea ON ea.module_id = m.id AND ea.user_id = u.id
             WHERE m.uuid::varchar = $1
             GROUP BY u.id
         ";

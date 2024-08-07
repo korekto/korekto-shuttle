@@ -12,6 +12,12 @@ pub struct TaskStats {
     pub started_timeout: i32,
 }
 
+impl TaskStats {
+    pub const fn total(&self) -> i32 {
+        self.ordered + self.errored
+    }
+}
+
 impl fmt::Display for TaskStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(

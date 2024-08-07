@@ -65,3 +65,11 @@ stop-smee-runner:
 
 start-pg:
   docker run --name it-postgres -p 5433:5432 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_DB=postgres postgres:14-alpine
+
+pg-admin:
+ docker run -d --name pg-admin -p 5050:5050 \
+   -v test_files/servers.json:/pgadmin4/servers.json \
+   -e 'PGADMIN_LISTEN_PORT=5050' \
+   -e 'PGADMIN_DEFAULT_EMAIL=toto@t.com' \
+   -e 'PGADMIN_DEFAULT_PASSWORD=toto' \
+   dpage/pgadmin4:latest
