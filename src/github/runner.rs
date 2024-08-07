@@ -2,27 +2,40 @@ use crate::config::Config;
 use crate::entities::GitHubGradingTask;
 use crate::github::url_to_slug;
 use anyhow::anyhow;
-use jsonwebtoken::jwk::{AlgorithmParameters, JwkSet};
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
-use octocrab::Octocrab;
+use jsonwebtoken::{
+    decode, decode_header,
+    jwk::{AlgorithmParameters, JwkSet},
+    Algorithm, DecodingKey, Validation,
+};
+use octocrab::{models::Repository, Octocrab, Page};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use time::OffsetDateTime;
+use tracing::info;
 
 #[derive(Clone)]
 pub struct Runner {
     org_name: String,
     repo_name: String,
-    client: Octocrab,
+    app_client: Octocrab,
+    installation_client: Octocrab,
     config: Config,
     jwk_set: JwkSet,
+}
+
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct Metadata {
+    app_id: u64,
+    app_name: String,
+    accessible_repositories: Vec<String>,
 }
 
 impl Runner {
     pub async fn new(
         org_name: String,
         repo_name: String,
-        client: Octocrab,
+        app_client: Octocrab,
+        installation_client: Octocrab,
         config: Config,
     ) -> anyhow::Result<Self> {
         let raw_jwk_set =
@@ -34,9 +47,33 @@ impl Runner {
         Ok(Self {
             org_name,
             repo_name,
-            client,
+            app_client,
+            installation_client,
             config,
             jwk_set,
+        })
+    }
+
+    pub async fn metadata(&self) -> anyhow::Result<Metadata> {
+        let app = self.app_client.current().app().await?;
+        let repos: Page<Repository> = self
+            .installation_client
+            .get("/installation/repositories", None::<&()>)
+            .await?;
+        let accessible_repositories = repos
+            .into_iter()
+            .map(|r| {
+                format!(
+                    "{}/{}",
+                    r.owner.map_or("<unknown>".to_string(), |o| o.login),
+                    r.name
+                )
+            })
+            .collect();
+        Ok(Metadata {
+            app_id: app.id.into_inner(),
+            app_name: app.name,
+            accessible_repositories,
         })
     }
 
@@ -52,7 +89,11 @@ impl Runner {
             .github_runner_callback_url_override
             .as_deref()
             .unwrap_or(&original_callback_url);
-        self.client
+        info!(
+            "Triggering remote job: {}/{} - {}",
+            &self.org_name, &self.repo_name, &self.config.github_runner_workflow_id
+        );
+        self.installation_client
             .actions()
             .create_workflow_dispatch(
                 &self.org_name,

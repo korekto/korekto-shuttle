@@ -5,9 +5,10 @@ use axum::{
     Json, Router,
 };
 use http::StatusCode;
-use tracing::error;
+use tracing::{error, warn};
 use validator::Validate;
 
+use crate::github::runner;
 use crate::service::dtos::{
     GradingTaskResponse, Page, PaginationQuery, UnparseableWebhookResponse, UserForAdminResponse,
 };
@@ -18,6 +19,7 @@ use crate::{
 
 pub fn router() -> Router<AppState> {
     Router::new()
+        .route("/", get(get_metadata))
         .route("/db/table", get(get_tables).delete(drop_table))
         .route("/db/migrations", delete(rerun_only_migrations))
         .route("/db", delete(recreate_db))
@@ -28,6 +30,23 @@ pub fn router() -> Router<AppState> {
             get(get_unparseable_webhooks).delete(delete_unparseable_webhooks),
         )
         .route("/grading_tasks", get(get_grading_tasks))
+}
+
+async fn get_metadata(
+    _user: AdminUser,
+    State(state): State<AppState>,
+) -> Result<Json<AdminMetadata>, (StatusCode, String)> {
+    let runner = state.gh_runner.metadata().await.map_err(|err| {
+        warn!("{err:?}");
+        (StatusCode::INTERNAL_SERVER_ERROR, format!("{err}"))
+    })?;
+
+    Ok(Json(AdminMetadata { runner }))
+}
+
+#[derive(serde::Serialize, Debug, Clone)]
+struct AdminMetadata {
+    runner: runner::Metadata,
 }
 
 async fn get_tables(
