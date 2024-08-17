@@ -24,7 +24,7 @@
 
 use crate::entities::{GitHubGradingTask, GradingTask, NewGradingTask, RawGradingTask};
 use crate::repository::Repository;
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use serde::Serialize;
 use sqlx::{Executor, Postgres};
 use std::fmt;
@@ -120,14 +120,15 @@ impl Repository {
         SET updated_at = NOW()
         RETURNING updated_at";
 
-        Ok(sqlx::query_scalar(QUERY)
+        sqlx::query_scalar(QUERY)
             .bind(user_assignment_id)
             .bind(user_provider_name)
             .bind(GradingStatus::QUEUED.to_string())
             .bind(repository)
             .bind(grader_repository)
             .fetch_one(&self.pool)
-            .await?)
+            .await
+            .context(format!("[sql] upsert_grading_task_internal(user_assignment_id={user_assignment_id:?}, user_provider_name={user_provider_name:?}, repository={repository:?}, grader_repository={grader_repository:?})"))
     }
 
     async fn upsert_grading_task_external(
@@ -148,12 +149,13 @@ impl Repository {
         SET updated_at = NOW()
         RETURNING updated_at";
 
-        Ok(sqlx::query_scalar(QUERY)
+        sqlx::query_scalar(QUERY)
             .bind(assignment_uuid)
             .bind(user_uuid)
             .bind(GradingStatus::QUEUED.to_string())
             .fetch_one(&self.pool)
-            .await?)
+            .await
+            .context(format!("[sql] upsert_grading_task_external(assignment_uuid={assignment_uuid:?}, user_uuid={user_uuid:?})"))
     }
 
     pub async fn get_grading_tasks(
@@ -188,7 +190,9 @@ impl Repository {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(|err| anyhow!("get_unparseable_webhooks({page}, {per_page}): {:?}", &err))
+            .context(format!(
+                "[sql] get_grading_tasks(page={page:?}, per_page={per_page:?})"
+            ))
     }
 
     pub async fn reserve_grading_tasks_to_execute_transact<'e, 'c: 'e, E>(
@@ -247,7 +251,7 @@ impl Repository {
             .bind(GradingStatus::RESERVED.to_string())
             .fetch_all(transaction)
             .await
-            .map_err(|err| anyhow!("reserve_grading_tasks_to_execute(min_execution_interval_in_secs={min_execution_interval_in_secs}, max_tasks={max_tasks}): {err:?}"))
+            .context(format!("[sql] reserve_grading_tasks_to_execute_transact(min_execution_interval_in_secs={min_execution_interval_in_secs:?}, max_tasks={max_tasks:?})"))
     }
 
     pub async fn delete_grading_task(
@@ -284,10 +288,10 @@ impl Repository {
 
         sqlx::query_as::<_, RawGradingTask>(QUERY)
             .bind(uuid)
-            .bind(error_message)
+            .bind(&error_message)
             .fetch_one(transaction)
             .await
-            .map_err(|err| anyhow!("delete_grading_task_transact(uuid={uuid}): {err:?}"))
+            .context(format!("[sql] delete_grading_task_transact(uuid={uuid:?}, error_message={error_message:?})"))
     }
 
     pub async fn update_grading_task_non_terminal_status(
@@ -324,7 +328,7 @@ impl Repository {
             .bind(status.to_string())
             .fetch_one(transaction)
             .await
-            .map_err(|err| anyhow!("update_grading_task_non_terminal_status_transact(uuid={uuid}, status={status}): {err:?}"))
+            .context(format!("[sql] update_grading_task_non_terminal_status_transact(uuid={uuid:?}, status={status:?})"))
     }
 
     pub async fn timeout_grading_tasks(
@@ -360,6 +364,6 @@ impl Repository {
             .bind(min_creation_interval_in_secs)
             .fetch_one(&self.pool)
             .await
-            .map_err(|err| anyhow!("timeout_grading_tasks(status={status}, min_creation_interval_in_secs={min_creation_interval_in_secs}): {err:?}"))
+            .context(format!("[sql] timeout_grading_tasks(status={status:?}, min_creation_interval_in_secs={min_creation_interval_in_secs:?})"))
     }
 }

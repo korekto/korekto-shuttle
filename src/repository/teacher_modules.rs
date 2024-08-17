@@ -1,5 +1,5 @@
-use anyhow::anyhow;
-use tracing::{debug, error};
+use anyhow::Context;
+use tracing::debug;
 
 use crate::entities;
 use crate::entities::{Module, NewModule, StudentGrades, User};
@@ -26,7 +26,7 @@ impl Repository {
             .bind(teacher.id)
             .fetch_all(&self.pool)
             .await
-            .map_err(|err| anyhow!("find_modules(): {:?}", &err))
+            .context(format!("[sql] find_modules(teacher={teacher:?})"))
     }
 
     pub async fn create_module(
@@ -64,15 +64,24 @@ impl Repository {
             .bind(&module.unlock_key)
             .bind(&module.source_url)
             .fetch_one(&mut *transaction)
-            .await?;
+            .await
+            .context(format!(
+                "[sql] create_module/module(teacher={teacher:?}, module={module:?})"
+            ))?;
 
         sqlx::query(TEACHER_RELATION_QUERY)
             .bind(row.id)
             .bind(teacher.id)
             .execute(&mut *transaction)
-            .await?;
+            .await
+            .context(format!(
+                "[sql] create_module/teacher_relation(teacher={teacher:?})"
+            ))?;
 
-        transaction.commit().await?;
+        transaction
+            .commit()
+            .await
+            .context(format!("[sql] create_module/tx(teacher={teacher:?})"))?;
 
         Ok(row)
     }
@@ -107,13 +116,12 @@ impl Repository {
 
         debug!("Loading module: {uuid}");
 
-        let row = sqlx::query_as::<_, Module>(QUERY)
+        sqlx::query_as::<_, Module>(QUERY)
             .bind(uuid)
             .bind(teacher.id)
             .fetch_one(&self.pool)
-            .await?;
-
-        Ok(row)
+            .await
+            .context(format!("[sql] find_module(uuid={uuid}teacher={teacher:?})"))
     }
 
     pub async fn update_module(
@@ -154,7 +162,7 @@ impl Repository {
 
         debug!("Updating module: {uuid}");
 
-        let row = sqlx::query_as::<_, Module>(QUERY)
+        sqlx::query_as::<_, Module>(QUERY)
             .bind(uuid)
             .bind(&module.name)
             .bind(&module.description)
@@ -164,9 +172,10 @@ impl Repository {
             .bind(&module.source_url)
             .bind(teacher.id)
             .fetch_one(&self.pool)
-            .await?;
-
-        Ok(row)
+            .await
+            .context(format!(
+                "[sql] update_module(uuid={uuid}, module={module:?}, teacher={teacher:?})"
+            ))
     }
 
     pub async fn delete_modules(&self, uuids: &Vec<String>, teacher: &User) -> anyhow::Result<u64> {
@@ -178,21 +187,18 @@ impl Repository {
               AND tm.teacher_id = $2
         ";
 
-        match sqlx::query(QUERY)
+        sqlx::query(QUERY)
             .bind(uuids)
             .bind(teacher.id)
             .execute(&self.pool)
             .await
-        {
-            Err(err) => {
-                error!("delete_modules({:?}): {:?}", uuids, &err);
-                Err(err.into())
-            }
-            Ok(query_result) => Ok(query_result.rows_affected()),
-        }
+            .map(|r| r.rows_affected())
+            .context(format!(
+                "[sql] delete_modules(uuids={uuids:?}, teacher={teacher:?})"
+            ))
     }
 
-    pub async fn get_grades(
+    pub async fn get_module_grades(
         &self,
         uuid: &str,
         teacher: &User,
@@ -241,6 +247,8 @@ impl Repository {
             .bind(teacher.id)
             .fetch_all(&self.pool)
             .await
-            .map_err(|err| anyhow!("get_grades(uuid={uuid}, teacher={teacher}): {:?}", &err))
+            .context(format!(
+                "[sql] get_module_grades(uuid={uuid:?}, teacher={teacher:?})"
+            ))
     }
 }

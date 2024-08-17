@@ -1,5 +1,5 @@
 use crate::entities;
-use anyhow::anyhow;
+use anyhow::Context;
 
 use super::Repository;
 
@@ -10,6 +10,6 @@ impl Repository {
         sqlx::query_as::<_, entities::User>(QUERY)
             .fetch_all(&self.pool)
             .await
-            .map_err(|err| anyhow!("find_users: {:?}", &err))
+            .context("[sql] find_users)")
     }
 }

@@ -3,12 +3,12 @@ use crate::service::dtos::{GradeAssignmentResponse, ModuleGradesResponse, Studen
 use crate::service::Service;
 
 impl Service {
-    pub async fn get_grades(
+    pub async fn get_module_grades(
         &self,
         uuid: &str,
         teacher: &User,
     ) -> anyhow::Result<ModuleGradesResponse> {
-        let entities = self.repo.get_grades(uuid, teacher).await?;
+        let entities = self.repo.get_module_grades(uuid, teacher).await?;
         let assignments: Vec<GradeAssignmentResponse> = entities
             .first()
             .map(|sg| sg.grades.0.iter().enumerate().map(Into::into).collect())

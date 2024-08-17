@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::Context;
 use axum::extract::Query;
 use axum::http::StatusCode;
 use axum::{extract::State, response::Redirect};
@@ -78,7 +78,7 @@ pub async fn gh_login_authorized(
                     let user_flow = decide_user_flow(&token, &user_logged, &state).await;
                     match user_flow {
                         Err(err) => {
-                            error!("Unexpected error: {err:?})");
+                            error!(error = %err, "[http] gh_login_authorized: Unexpected error in user flow");
                             // TODO maybe some 500 page with info
                             (jar, Ok(Redirect::to("/")))
                         }
@@ -88,14 +88,14 @@ pub async fn gh_login_authorized(
                         }
                     }
                 }
-                Err(error) => {
-                    tracing::warn!("Error while retrieving GH user infos: {:?}", error);
+                Err(err) => {
+                    error!(error = %err, "[http] gh_login_authorized: Unexpected error in user info retrieval");
                     (jar, Err(StatusCode::FORBIDDEN))
                 }
             }
         }
-        Err(error) => {
-            tracing::info!("Error while retrieving GH tokens: {:?}", error);
+        Err(err) => {
+            error!(error = %err, "[http] gh_login_authorized: Error while retrieving GH tokens");
             (jar, Err(StatusCode::FORBIDDEN))
         }
     }
@@ -114,10 +114,7 @@ pub async fn gh_post_install(
             .update_installation_id(&user.id, &installation_id)
             .await;
         if let Err(err) = result {
-            error!(
-                "Failed to store installation_id {} for user {}: {err}",
-                &installation_id, &user.provider_login
-            );
+            error!(error = %err, ?installation_id, provider_login = ?&user.provider_login, "[http] gh_post_install: Failed to store installation_id");
         }
     }
 
@@ -191,7 +188,7 @@ impl TryFrom<(&BasicTokenResponse, &GitHubUserLogged)> for NewUser {
             + Duration::try_from(
                 token
                     .expires_in()
-                    .ok_or_else(|| anyhow!("Missing expiration from access token"))?,
+                    .context("Missing expiration from access token")?,
             )?;
 
         let refresh_token_expiration = OffsetDateTime::now_utc() + Duration::days(30 * 4);
@@ -209,7 +206,7 @@ impl TryFrom<(&BasicTokenResponse, &GitHubUserLogged)> for NewUser {
                 refresh_token: Token {
                     value: token
                         .refresh_token()
-                        .ok_or_else(|| anyhow!("Missing refresh token for user {}", &user.login))?
+                        .with_context(|| format!("Missing refresh token for user {}", &user.login))?
                         .secret()
                         .to_string(),
                     expiration_date: to_primitive(refresh_token_expiration),

@@ -1,5 +1,5 @@
 use crate::entities;
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use sqlx::{Encode, Postgres, Type};
 use std::fmt::Display;
 
@@ -31,7 +31,7 @@ impl Repository {
             .fetch_optional(&self.pool)
             .await
         {
-            Err(err) => Err(anyhow!("find_user_by_{field}({}): {:?}", key, &err)),
+            Err(err) => Err(err).context(format!("[sql] find_user_by_{field}(key={key})")),
             Ok(None) => Err(anyhow!("User not found")),
             Ok(Some(res)) => Ok(res),
         }

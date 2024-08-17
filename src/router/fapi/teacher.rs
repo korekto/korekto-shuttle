@@ -44,7 +44,7 @@ async fn get_modules(
         .find_modules(&user.0)
         .await
         .map_err(|err| {
-            error!("get_modules {err:#?}");
+            error!(error = %err, ?user, "[http] get_modules");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
     Ok(Json(modules.vec_into()))
@@ -61,7 +61,7 @@ async fn create_module(
         .create_module(&module, &user.0)
         .await
         .map_err(|err| {
-            error!("create_module {err:#?}");
+            error!(error = %err, ?user, "[http] create_module");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -79,7 +79,7 @@ async fn get_module(
         .find_module(&module_id, &user.0)
         .await
         .map_err(|err| {
-            error!("get_module {err:#?}");
+            error!(error = %err, ?user, module_id, "[http] get_module");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -98,7 +98,7 @@ async fn update_module(
         .update_module(&module_id, &module, &user.0)
         .await
         .map_err(|err| {
-            error!("update_module {err:#?}");
+            error!(error = %err, ?user, module_id, "[http] update_module");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -116,7 +116,7 @@ async fn delete_modules(
         .delete_modules(&module_ids, &user.0)
         .await
         .map_err(|err| {
-            error!("delete_modules {err:#?}");
+            error!(error = %err, ?user, ?module_ids, "[http] delete_modules");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -131,10 +131,10 @@ async fn get_grades(
     Ok(Json(
         state
             .service
-            .get_grades(&module_id, &user.0)
+            .get_module_grades(&module_id, &user.0)
             .await
             .map_err(|err| {
-                error!("get_grades {err:#?}");
+                error!(error = %err, ?user, module_id, "[http] delete_modules");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?,
     ))
@@ -152,7 +152,7 @@ async fn create_assignment(
         .create_assignment(&module_id, &assignment, &user.0)
         .await
         .map_err(|err| {
-            error!("create_assignment {err:#?}");
+            error!(error = %err, ?user, module_id, "[http] create_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -170,7 +170,7 @@ async fn get_assignment(
         .find_assignment(&module_id, &assignment_id, &user.0)
         .await
         .map_err(|err| {
-            error!("get_assignment {err:#?}");
+            error!(error = %err, ?user, module_id, assignment_id, "[http] get_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -189,7 +189,7 @@ async fn update_assignment(
         .update_assignment(&module_id, &assignment_id, &assignment, &user.0)
         .await
         .map_err(|err| {
-            error!("update_assignment {err:#?}");
+            error!(error = %err, ?user, module_id, assignment_id, "[http] update_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -208,7 +208,7 @@ async fn delete_assignments(
         .delete_assignments(&module_id, &assignment_ids, &user.0)
         .await
         .map_err(|err| {
-            error!("delete_assignments {err:#?}");
+            error!(error = %err, ?user, module_id, ?assignment_ids, "[http] update_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 

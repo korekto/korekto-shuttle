@@ -19,7 +19,7 @@ impl Scheduler {
         loop {
             interval.tick().await;
             if let Err(err) = self.tick().await {
-                error!("Scheduler encountered an error: {err:?}");
+                error!(error = %err, "[scheduler] unknown error");
             }
         }
     }

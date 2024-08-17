@@ -1,6 +1,6 @@
 use crate::entities::{Assignment, GradingMetadata, InstantGrade, User, UserAssignment};
 use crate::repository::Repository;
-use anyhow::anyhow;
+use anyhow::Context;
 use const_format::formatcp;
 use sqlx::types::Json;
 use sqlx::{Executor, Postgres};
@@ -32,12 +32,15 @@ impl Repository {
             JOIN assignment a ON a.id = u.assignment_id
         ";
 
-        Ok(sqlx::query_as::<_, Assignment>(QUERY)
+        sqlx::query_as::<_, Assignment>(QUERY)
             .bind(provider_login)
             .bind(repositories)
             .bind(linked)
             .fetch_all(&self.pool)
-            .await?)
+            .await
+            .context(format!(
+                "[sql] upsert_user_assignments(provider_login={provider_login:?}, repositories={repositories:?}, linked={linked:?})"
+            ))
     }
 
     pub async fn update_assignment_grade_transact<'e, 'c: 'e, E>(
@@ -67,8 +70,11 @@ impl Repository {
             .bind(normalized_grade)
             .bind(Json(grade))
             .execute(transaction)
-            .await?;
-        Ok(())
+            .await
+            .map(|_| ())
+            .context(format!(
+                "[sql] update_assignment_grade_transact(user_assignment_id={user_assignment_id:?}, grade={grade:?})"
+            ))
     }
 
     pub async fn get_assignment(
@@ -126,12 +132,9 @@ impl Repository {
             .bind(min_execution_interval_in_secs)
             .fetch_optional(&self.pool)
             .await
-            .map_err(|err| {
-                anyhow!(
-                    "get_assignment({:?}, {module_uuid}, {assignment_uuid}): {err:?}",
-                    &user.provider_login
-                )
-            })
+            .context(format!(
+                "[sql] get_assignment(user={user:?}, module_uuid={module_uuid:?}, assignment_uuid={assignment_uuid:?}, min_execution_interval_in_secs={min_execution_interval_in_secs:?})"
+            ))
     }
 
     pub async fn update_assignment_current_grading_metadata<'e, 'c: 'e, E>(
@@ -155,7 +158,10 @@ impl Repository {
             .bind(user_assignment_id)
             .bind(Json(grading_metadata))
             .execute(transaction)
-            .await?;
-        Ok(())
+            .await
+            .map(|_| ())
+            .context(format!(
+                "[sql] update_assignment_current_grading_metadata(user_assignment_id={user_assignment_id:?}, grading_metadata={grading_metadata:?})"
+            ))
     }
 }

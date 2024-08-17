@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::Context;
 
 use super::Repository;
 
@@ -17,14 +17,7 @@ impl Repository {
             .bind(installation_id)
             .execute(&self.pool)
             .await
-            .map_err(|err| {
-                anyhow!(
-                    "update_installation_id({:?}, {:?}): {:?}",
-                    user_id,
-                    installation_id,
-                    &err
-                )
-            })?;
-        Ok(())
+            .map(|_| ())
+            .context(format!("[sql] update_installation_id(user_id={user_id:?}, installation_id={installation_id:?})"))
     }
 }
