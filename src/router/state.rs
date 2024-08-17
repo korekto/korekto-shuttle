@@ -22,6 +22,7 @@ pub struct AppState {
     pub service: Service,
     pub instance_secret: String,
     pub gh_runner: Runner,
+    _sentry: crate::sentry::Holder,
 }
 
 impl FromRef<AppState> for Key {
@@ -62,6 +63,7 @@ impl AppState {
                 .ok_or_else(|| anyhow!("Configured GITHUB_CLIENT_CACHE_SIZE must be > 0"))?,
             config.github_app_id,
         );
+        let sentry = crate::sentry::Holder::new(config);
 
         Ok(Self {
             config: config.clone(),
@@ -74,6 +76,7 @@ impl AppState {
             service: Service::new(pool),
             instance_secret,
             gh_runner,
+            _sentry: sentry,
         })
     }
 }

@@ -51,3 +51,4 @@ jobs:
             GITHUB_RUNNER_APP_PRIVATE_KEY = \"\"\"${{ secrets.APP_GITHUB_RUNNER_APP_PRIVATE_KEY }}\"\"\"
             GITHUB_RUNNER_REPO_SLUG = 'lernejo/korekto-runner'
             GITHUB_RUNNER_INSTALLATION_ID = '${{ secrets.APP_GITHUB_RUNNER_INSTALLATION_ID }}'
+            SENTRY_DSN = '${{ secrets.APP_SENTRY_DSN }}'

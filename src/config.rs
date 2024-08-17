@@ -38,6 +38,8 @@ pub struct Config {
     #[serde(default = "default_max_parallel_gradings")]
     #[validate(range(min = 1))]
     pub max_parallel_gradings: i32,
+    #[cfg(feature = "sentry")]
+    pub sentry_dsn: String,
 }
 
 const fn default_github_client_cache_size() -> usize {

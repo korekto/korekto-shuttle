@@ -9,6 +9,7 @@ use axum::{
 };
 use tower::ServiceBuilder;
 use tower_http::trace::TraceLayer;
+use tracing::error;
 
 mod auth;
 mod error;
@@ -18,8 +19,10 @@ pub mod state;
 mod webhook;
 
 pub fn router(state: AppState) -> Router {
-    Router::new()
+    let mut router = Router::new()
         .route("/", get(spa::welcome_handler))
+        .route("/error", get(error))
+        .route("/panic", get(panic))
         .nest("/auth", auth::router())
         .nest("/fapi", fapi::router())
         .nest("/webhook", webhook::router())
@@ -32,7 +35,17 @@ pub fn router(state: AppState) -> Router {
                 .timeout(Duration::from_secs(10)),
         )
         .fallback(fallback)
-        .with_state(state)
+        .with_state(state);
+    router = crate::sentry::configure_router(router);
+    router
+}
+
+async fn error() {
+    error!("test error!");
+}
+
+async fn panic() {
+    panic!("Everything is on fire!");
 }
 
 #[allow(clippy::unused_async)]

@@ -11,6 +11,7 @@ async fn main(
 ) -> KorektoServiceResult {
     let config = Config::try_from(secret_store)?;
     let state = AppState::new(&config, pool).await?;
+    korekto::tracing::setup()?;
 
     state.service.repo.reset_migrations().await?;
     state.service.repo.run_migrations().await?;
