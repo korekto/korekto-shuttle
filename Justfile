@@ -24,8 +24,8 @@ clippy:
     -A clippy::no_effect_underscore_binding \
     -A clippy::missing_errors_doc
 
-build:
-  cargo build
+build *FLAGS='':
+  cargo build {{FLAGS}}
 
 test:
   cargo nextest run --lib --bins --features tests-with-resources --hide-progress-bar --success-output immediate --failure-output immediate
