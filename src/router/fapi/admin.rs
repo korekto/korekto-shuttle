@@ -154,7 +154,7 @@ async fn set_users_teacher(
 }
 
 async fn get_unparseable_webhooks(
-    _user: AdminUser,
+    user: AdminUser,
     State(state): State<AppState>,
     Query(pagination): Query<PaginationQuery>,
 ) -> Result<Json<Page<UnparseableWebhookResponse>>, (StatusCode, Json<String>)> {
@@ -166,25 +166,34 @@ async fn get_unparseable_webhooks(
             .service
             .get_unparseable_webhooks(&pagination)
             .await
-            .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))?,
+            .map_err(|err| {
+                error!(error = %err, ?user, ?pagination, "[http] get_unparseable_webhooks");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(StatusCode::INTERNAL_SERVER_ERROR.to_string()),
+                )
+            })?,
     ))
 }
 
 async fn delete_unparseable_webhooks(
-    _user: AdminUser,
+    user: AdminUser,
     State(state): State<AppState>,
-) -> Result<(), (StatusCode, Json<String>)> {
+) -> Result<(), StatusCode> {
     state
         .service
         .repo
         .delete_unparseable_webhooks()
         .await
-        .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))?;
+        .map_err(|err| {
+            error!(error = %err, ?user, "[http] delete_unparseable_webhooks");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     Ok(())
 }
 
 async fn get_grading_tasks(
-    _user: AdminUser,
+    user: AdminUser,
     State(state): State<AppState>,
     Query(pagination): Query<PaginationQuery>,
 ) -> Result<Json<Page<GradingTaskResponse>>, (StatusCode, Json<String>)> {
@@ -196,6 +205,12 @@ async fn get_grading_tasks(
             .service
             .get_grading_tasks(&pagination)
             .await
-            .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, Json(format!("{err}"))))?,
+            .map_err(|err| {
+                error!(error = %err, ?user, ?pagination, "[http] get_grading_tasks");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(StatusCode::INTERNAL_SERVER_ERROR.to_string()),
+                )
+            })?,
     ))
 }

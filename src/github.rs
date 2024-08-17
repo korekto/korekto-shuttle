@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::Context;
 use octocrab::Octocrab;
 use std::fmt;
 use std::fmt::Formatter;
@@ -61,7 +61,7 @@ impl FromStr for GitRepoSlug {
                 org: caps["org"].to_owned(),
                 repo: caps["repo"].to_owned(),
             })
-            .ok_or_else(|| anyhow!("Unparseable runner repo slug"))
+            .context("Unparseable runner repo slug")
     }
 }
 

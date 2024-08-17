@@ -48,7 +48,7 @@ async fn get_assignment(
         )
         .await
         .map_err(|err| {
-            error!("get_assignment {err:#?}");
+            error!(error = %err, ?user, module_id, ?assignment_id, "[http] get_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?
         .ok_or(StatusCode::NOT_FOUND)?;
@@ -66,7 +66,7 @@ async fn get_module(
         .get_module(&user, &module_id)
         .await
         .map_err(|err| {
-            error!("get_module {err:#?}");
+            error!(error = %err, ?user, module_id, "[http] get_module");
             StatusCode::INTERNAL_SERVER_ERROR
         })?
         .ok_or(StatusCode::NOT_FOUND)?;
@@ -83,7 +83,7 @@ async fn list_modules(
         .list_modules(&user)
         .await
         .map_err(|err| {
-            error!("list_modules {err:#?}");
+            error!(error = %err, ?user, "[http] list_modules");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
     let resp = VecInto::<UserModuleDescResponse>::vec_into(modules);
@@ -95,16 +95,14 @@ async fn redeem_module(
     State(state): State<AppState>,
     Query(query): Query<RedeemQuery>,
 ) -> Result<Either<Redirect, Json<String>>, StatusCode> {
+    tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
     info!("Trying to redeem module with key {}", &query.key);
     let module_id = state
         .service
         .redeem_module(&query.key, &user)
         .await
         .map_err(|err| {
-            warn!(
-                "Unable to redeem module with key: {}, for user {user}: {err}",
-                &query.key
-            );
+            warn!(error = %err, ?user, ?query, "[http] redeem_module: Unable to redeem module");
             StatusCode::FORBIDDEN
         })?;
 
@@ -120,7 +118,7 @@ async fn redeem_module(
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, Debug)]
 struct RedeemQuery {
     key: ObfuscatedStr,
     redirect: Option<bool>,
@@ -140,9 +138,7 @@ async fn trigger_grading(
         })
         .await
         .map_err(|err| {
-            warn!(
-                "Unable to trigger grading of module: {module_id}, assignment: {assignment_id}, for user {user}: {err}"
-            );
+            error!(error = %err, ?user, ?module_id, ?assignment_id, "[http] trigger_grading: Unable to trigger grading");
             StatusCode::FORBIDDEN
         })?;
     Ok(())
@@ -158,13 +154,12 @@ async fn sync_repo(
         .sync_repo(&user, &module_id, &assignment_id, state.config.min_grading_interval_in_secs, &state.github_clients)
         .await
         .map_err(|err| {
-            warn!(
-                "Unable to sync repo for module: {module_id}, assignment: {assignment_id}, for user {user}: {err:?}"
-            );
             match err {
                 SyncError::AssignmentNotFound => StatusCode::NOT_FOUND,
                 SyncError::UserInstallationUnknown => StatusCode::NOT_IMPLEMENTED,
-                SyncError::BadInstallationId | SyncError::Unknown(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                SyncError::BadInstallationId | SyncError::Unknown(_) => {
+                    error!(error = ?err, ?user, ?module_id, ?assignment_id, "[http] sync_repo: Unable to sync repo");
+                    StatusCode::INTERNAL_SERVER_ERROR},
             }
         })
 }

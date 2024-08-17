@@ -1,7 +1,7 @@
 use crate::entities::{ModuleDesc, User, UserModule, UserModuleDesc};
 use crate::repository::Repository;
 use crate::service::ObfuscatedStr;
-use anyhow::anyhow;
+use anyhow::Context;
 use const_format::formatcp;
 
 const MATCHING_ASSIGNMENTS_CTE: &str = "\
@@ -41,8 +41,11 @@ impl Repository {
             .bind(user.id)
             .bind(module_id)
             .execute(&self.pool)
-            .await?;
-        Ok(())
+            .await
+            .map(|_| ())
+            .context(format!(
+                "[sql] create_user_module(user={user:?}, module_id={module_id:?})"
+            ))
     }
 
     pub async fn find_module_by_key(
@@ -61,10 +64,11 @@ impl Repository {
             WHERE m.unlock_key = $1
             GROUP BY m.id";
 
-        Ok(sqlx::query_as::<_, ModuleDesc>(QUERY)
+        sqlx::query_as::<_, ModuleDesc>(QUERY)
             .bind(&key.0)
             .fetch_optional(&self.pool)
-            .await?)
+            .await
+            .context(format!("[sql] find_module_by_key(key={key:?})"))
     }
 
     pub async fn list_modules(&self, user: &User) -> anyhow::Result<Vec<UserModuleDesc>> {
@@ -93,7 +97,7 @@ impl Repository {
             .bind(user.id)
             .fetch_all(&self.pool)
             .await
-            .map_err(|err| anyhow!("list_modules({:?}): {:?}", &user.provider_login, &err))
+            .context(format!("[sql] list_modules(user={user:?})"))
     }
 
     pub async fn get_module(
@@ -128,13 +132,8 @@ impl Repository {
             .bind(module_uuid)
             .fetch_optional(&self.pool)
             .await
-            .map_err(|err| {
-                anyhow!(
-                    "get_module({:?}, {:}): {:?}",
-                    &user.provider_login,
-                    module_uuid,
-                    &err
-                )
-            })
+            .context(format!(
+                "[sql] get_module(user={user:?}, module_uuid={module_uuid:?})"
+            ))
     }
 }

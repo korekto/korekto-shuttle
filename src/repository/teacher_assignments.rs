@@ -1,5 +1,6 @@
 use crate::entities::{Assignment, NewAssignment, User};
-use tracing::{debug, error};
+use anyhow::Context;
+use tracing::debug;
 
 use super::Repository;
 
@@ -21,7 +22,7 @@ impl Repository {
             RETURNING a.*, a.type as a_type, a.uuid::varchar as uuid
             ";
 
-        Ok(sqlx::query_as::<_, Assignment>(QUERY)
+        sqlx::query_as::<_, Assignment>(QUERY)
             .bind(module_uuid)
             .bind(&assignment.name)
             .bind(assignment.start)
@@ -35,7 +36,8 @@ impl Repository {
             .bind(&assignment.grader_run_url)
             .bind(teacher.id)
             .fetch_one(&self.pool)
-            .await?)
+            .await
+            .context(format!("[sql] create_assignment(module_uuid={module_uuid:?}, assignment={assignment:?}, teacher={teacher:?})"))
     }
 
     pub async fn find_assignment(
@@ -68,12 +70,13 @@ impl Repository {
 
         debug!("Loading assignment: {uuid} (module {module_uuid})");
 
-        Ok(sqlx::query_as::<_, Assignment>(QUERY)
+        sqlx::query_as::<_, Assignment>(QUERY)
             .bind(module_uuid)
             .bind(uuid)
             .bind(teacher.id)
             .fetch_one(&self.pool)
-            .await?)
+            .await
+            .context(format!("[sql] find_assignment(module_uuid={module_uuid:?}, uuid={uuid:?}, teacher={teacher:?})"))
     }
 
     pub async fn update_assignment(
@@ -106,7 +109,7 @@ impl Repository {
 
         debug!("Updating assignment: {uuid} (module {module_uuid})");
 
-        Ok(sqlx::query_as::<_, Assignment>(QUERY)
+        sqlx::query_as::<_, Assignment>(QUERY)
             .bind(module_uuid)
             .bind(uuid)
             .bind(&assignment.name)
@@ -121,7 +124,8 @@ impl Repository {
             .bind(&assignment.grader_run_url)
             .bind(teacher.id)
             .fetch_one(&self.pool)
-            .await?)
+            .await
+            .context(format!("[sql] update_assignment(module_uuid={module_uuid:?}, uuid={uuid:?}, assignment={assignment:?}, teacher={teacher:?})"))
     }
 
     pub async fn delete_assignments(
@@ -140,18 +144,13 @@ impl Repository {
               AND tm.teacher_id = $3
         ";
 
-        match sqlx::query(QUERY)
+        sqlx::query(QUERY)
             .bind(module_uuid)
             .bind(uuids)
             .bind(teacher.id)
             .execute(&self.pool)
             .await
-        {
-            Err(err) => {
-                error!("delete_assignments({:?}): {:?}", uuids, &err);
-                Err(err.into())
-            }
-            Ok(query_result) => Ok(query_result.rows_affected()),
-        }
+            .map(|q| q.rows_affected())
+            .context(format!("[sql] delete_assignments(uuids={uuids:?})"))
     }
 }

@@ -1,5 +1,5 @@
 use crate::entities;
-use tracing::error;
+use anyhow::Context;
 
 use super::Repository;
 
@@ -15,15 +15,9 @@ impl Repository {
                                where table_schema = 'public'
                              ) t";
 
-        match sqlx::query_as::<_, entities::Table>(QUERY)
+        sqlx::query_as::<_, entities::Table>(QUERY)
             .fetch_all(&self.pool)
             .await
-        {
-            Err(err) => {
-                error!("get_tables: {:?}", &err);
-                Err(err.into())
-            }
-            Ok(users) => Ok(users),
-        }
+            .context("[sql] get_tables()")
     }
 }

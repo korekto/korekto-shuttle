@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::Context;
 
 use crate::entities;
 
@@ -26,14 +26,7 @@ impl Repository {
             .bind(names.last_name)
             .fetch_one(&self.pool)
             .await
-            .map_err(|err| {
-                anyhow!(
-                    "upsert_user({:?}, {:?}): {:?}",
-                    &user.provider_login,
-                    &user.provider_email,
-                    &err
-                )
-            })
+            .context(format!("[sql] upsert_user(user={user:?})"))
     }
 
     pub async fn update_user_profile(
@@ -54,7 +47,9 @@ impl Repository {
             .bind(&user.school_email)
             .fetch_one(&self.pool)
             .await
-            .map_err(|err| anyhow!("update_user_profile({:?}, {:?}): {:?}", user_id, user, &err))
+            .context(format!(
+                "[sql] update_user_profile(user_id={user_id:?}, user={user:?})"
+            ))
     }
 }
 

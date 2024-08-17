@@ -10,7 +10,7 @@ use axum_extra::TypedHeader;
 use headers::authorization::Bearer;
 use headers::Authorization;
 use http::StatusCode;
-use tracing::{error, warn};
+use tracing::{debug, error};
 
 string_header!(XGithubEvent, X_GITHUB_EVENT_HEADER, "x-github-event");
 string_header!(XHubSignature, X_HUB_SIGNATURE, "x-hub-signature-256");
@@ -33,7 +33,7 @@ async fn on_github_event(
         &state.config.github_app_webhook_secret,
         &signature,
     ) {
-        tracing::debug!("Received webhook \"{event_type}\" with invalid signature: {err:?}");
+        debug!(error = %err, ?event_type, "Received webhook with invalid signature");
     } else {
         match parse_event(&event_type, &payload) {
             Ok(result) => {
@@ -46,7 +46,7 @@ async fn on_github_event(
                     .insert_unparseable_webhook("github", &event_type, &payload, &err.to_string())
                     .await
                 {
-                    warn!("Fail to save unparseable webhook: {err:?}");
+                    error!(error = %err, ?event_type, ?payload, "[http] on_github_event");
                 }
             }
         }
@@ -62,21 +62,21 @@ async fn on_github_runner_event(
     match payload_result {
         Ok(Json(payload)) => {
             state.gh_runner.verify_jwt(bearer.token()).map_err(|err| {
-                error!("Unprocessable runner event: {err:?}");
+                debug!(error = %err, token = bearer.token(), ?payload, "[http] on_github_runner_event: Invalid JWT");
                 (StatusCode::UNAUTHORIZED, format!("{err:?}"))
             })?;
 
             state
                 .service
-                .on_runner_webhook(payload)
+                .on_runner_webhook(&payload)
                 .await
                 .map_err(|err| {
-                    warn!("Error when handling runner webhook: {err:?}");
+                    error!(error = %err, ?payload, "[http] on_github_runner_event: Unknown error");
                     (StatusCode::INTERNAL_SERVER_ERROR, format!("{err:?}"))
                 })?;
         }
         Err(err) => {
-            error!("Unknown error: {err:?}");
+            error!(error = %err, "[http] on_github_runner_event: Invalid JSON");
         }
     }
 

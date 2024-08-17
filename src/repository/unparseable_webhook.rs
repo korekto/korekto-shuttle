@@ -1,6 +1,6 @@
 use crate::entities::UnparseableWebhook;
 use crate::repository::Repository;
-use anyhow::anyhow;
+use anyhow::Context;
 
 impl Repository {
     pub async fn insert_unparseable_webhook(
@@ -21,15 +21,8 @@ impl Repository {
             .bind(error)
             .execute(&self.pool)
             .await
-            .map_err(|err| {
-                anyhow!(
-                    "insert_unparseable_webhook({:?}, {:?}): {:?}",
-                    origin,
-                    event,
-                    &err
-                )
-            })?;
-        Ok(())
+            .map(|_| ())
+            .context(format!("[sql] insert_unparseable_webhook(origin={event:?}, origin={event:?}, payload={payload:?})"))
     }
 
     pub async fn get_unparseable_webhooks(
@@ -52,7 +45,9 @@ impl Repository {
             .bind(offset)
             .fetch_all(&self.pool)
             .await
-            .map_err(|err| anyhow!("get_unparseable_webhooks({page}, {per_page}): {:?}", &err))
+            .context(format!(
+                "[sql] get_unparseable_webhooks(page={page:?}, per_page={per_page:?})"
+            ))
     }
 
     pub async fn delete_unparseable_webhooks(&self) -> anyhow::Result<()> {
@@ -61,8 +56,7 @@ impl Repository {
         sqlx::query(QUERY)
             .execute(&self.pool)
             .await
-            .map_err(|err| anyhow!("delete_unparseable_webhooks(): {:?}", &err))?;
-
-        Ok(())
+            .map(|_| ())
+            .context("[sql] delete_unparseable_webhooks()")
     }
 }

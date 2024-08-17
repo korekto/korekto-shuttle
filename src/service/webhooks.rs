@@ -80,14 +80,14 @@ impl Service {
         Ok(())
     }
 
-    pub async fn on_runner_webhook(&self, event: RunnerPayload) -> anyhow::Result<()> {
+    pub async fn on_runner_webhook(&self, event: &RunnerPayload) -> anyhow::Result<()> {
         debug!("Received runner event: {event:?}");
         match event.status {
             RunnerStatus::Started => {
-                self.on_runner_event_started(&event).await?;
+                self.on_runner_event_started(event).await?;
             }
             RunnerStatus::Completed => {
-                self.on_runner_event_completed(&event).await?;
+                self.on_runner_event_completed(event).await?;
             }
             RunnerStatus::Failure => {
                 self.repo

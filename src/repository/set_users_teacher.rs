@@ -1,5 +1,5 @@
 use super::Repository;
-use tracing::error;
+use anyhow::Context;
 
 impl Repository {
     pub async fn set_users_teacher(&self, user_ids: &[i32]) -> anyhow::Result<u64> {
@@ -7,12 +7,11 @@ impl Repository {
         SET teacher = true
         WHERE id = ANY($1)";
 
-        match sqlx::query(QUERY).bind(user_ids).execute(&self.pool).await {
-            Err(err) => {
-                error!("set_users_teacher({:?}): {:?}", user_ids, &err);
-                Err(err.into())
-            }
-            Ok(query_result) => Ok(query_result.rows_affected()),
-        }
+        sqlx::query(QUERY)
+            .bind(user_ids)
+            .execute(&self.pool)
+            .await
+            .map(|q| q.rows_affected())
+            .context(format!("[sql] set_users_teacher(user_ids={user_ids:?})"))
     }
 }

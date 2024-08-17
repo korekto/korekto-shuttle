@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::Context;
 use axum::extract::FromRef;
 use axum_extra::extract::cookie::Key;
 use oauth2::basic::BasicClient;
@@ -59,8 +59,12 @@ impl AppState {
             github::create_gh_app_client(config.github_app_id, &config.github_app_private_key)?;
         let github_clients = ClientCache::new(
             gh_app_client,
-            NonZeroUsize::new(config.github_client_cache_size)
-                .ok_or_else(|| anyhow!("Configured GITHUB_CLIENT_CACHE_SIZE must be > 0"))?,
+            NonZeroUsize::new(config.github_client_cache_size).with_context(|| {
+                format!(
+                    "[config] Configured GITHUB_CLIENT_CACHE_SIZE must be > 0 bu was: {}",
+                    config.github_client_cache_size
+                )
+            })?,
             config.github_app_id,
         );
         let sentry = crate::sentry::Holder::new(config);
@@ -92,9 +96,9 @@ impl OAuth {
         let github_client_id = ClientId::new(config.github_app_client_id.to_string());
         let github_client_secret = ClientSecret::new(config.github_app_client_secret.to_string());
         let gh_auth_url = AuthUrl::new("https://github.com/login/oauth/authorize".to_string())
-            .map_err(|_| anyhow!("Invalid authorization endpoint URL"))?;
+            .context("[config] Invalid authorization endpoint URL")?;
         let gh_token_url = TokenUrl::new("https://github.com/login/oauth/access_token".to_string())
-            .map_err(|_| anyhow!("Invalid token endpoint URL"))?;
+            .context("[config] Invalid token endpoint URL")?;
 
         let gh_client = BasicClient::new(
             github_client_id,
@@ -104,7 +108,9 @@ impl OAuth {
         );
 
         let redirect_url = RedirectUrl::new(format!("{}/auth/gh/authorized", config.base_url))
-            .map_err(|_| anyhow!("Unparseable GH redirect URL"))?;
+            .with_context(|| {
+                format!("[config] Unparseable GH redirect URL: {}", config.base_url)
+            })?;
         Ok(Self {
             gh_client,
             redirect_url,
