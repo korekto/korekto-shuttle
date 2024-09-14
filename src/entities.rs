@@ -168,6 +168,8 @@ pub struct NewAssignment {
     pub factor_percentage: i32,
     #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub grader_run_url: String,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub hidden_by_teacher: bool,
 }
 
 #[derive(sqlx::FromRow, Debug, Clone)]
@@ -184,6 +186,7 @@ pub struct Assignment {
     pub repository_name: String,
     pub factor_percentage: i32,
     pub grader_run_url: String,
+    pub hidden_by_teacher: bool,
 }
 
 pub enum NewGradingTask {

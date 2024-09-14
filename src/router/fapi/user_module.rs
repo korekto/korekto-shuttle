@@ -8,6 +8,7 @@ use axum::{
 };
 use axum_extra::either::Either;
 use http::StatusCode;
+use time::OffsetDateTime;
 use tracing::{error, info, warn};
 
 use crate::router::auth::AuthenticatedUser;
@@ -128,7 +129,7 @@ async fn trigger_grading(
     AuthenticatedUser(user): AuthenticatedUser,
     State(state): State<AppState>,
     Path((module_id, assignment_id)): Path<(String, String)>,
-) -> Result<(), StatusCode> {
+) -> Result<Json<Option<OffsetDateTime>>, StatusCode> {
     state
         .service
         .repo
@@ -137,11 +138,11 @@ async fn trigger_grading(
             user_uuid: user.uuid.clone(),
         })
         .await
+        .map(Json)
         .map_err(|err| {
             error!(error = %err, ?user, ?module_id, ?assignment_id, "[http] trigger_grading: Unable to trigger grading");
             StatusCode::FORBIDDEN
-        })?;
-    Ok(())
+        })
 }
 
 async fn sync_repo(

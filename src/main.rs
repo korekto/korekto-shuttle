@@ -13,7 +13,6 @@ async fn main(
     let state = AppState::new(&config, pool).await?;
     korekto::tracing::setup()?;
 
-    state.service.repo.reset_migrations().await?;
     state.service.repo.run_migrations().await?;
 
     let router = router::router(state.clone());

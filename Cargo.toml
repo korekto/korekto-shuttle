@@ -14,9 +14,9 @@ sentry = ["dep:sentry", "dep:sentry-tower", "dep:sentry-tracing"]
 shuttle = ["sentry"]
 
 [dependencies]
-shuttle-runtime = { version = "0.45.0", default-features = false }
-shuttle-axum = "0.45.0"
-shuttle-shared-db = { version = "0.45.0", features = ["postgres", "sqlx"] }
+shuttle-runtime = { version = "0.47.0", default-features = false }
+shuttle-axum = "0.47.0"
+shuttle-shared-db = { version = "0.47.0", features = ["postgres", "sqlx"] }
 
 axum = {version = "0.7.5"}
 axum-extra = { version = "0.9.3", features = ["cookie-private", "cookie-key-expansion", "typed-header"] }

@@ -200,6 +200,7 @@ pub struct TeacherAssignmentResponse {
     pub repository_name: String,
     pub factor_percentage: i32,
     pub grader_run_url: String,
+    pub hidden_by_teacher: bool,
 }
 
 impl From<Assignment> for TeacherAssignmentResponse {
@@ -216,6 +217,7 @@ impl From<Assignment> for TeacherAssignmentResponse {
             repository_name: value.repository_name,
             factor_percentage: value.factor_percentage,
             grader_run_url: value.grader_run_url,
+            hidden_by_teacher: value.hidden_by_teacher,
         }
     }
 }

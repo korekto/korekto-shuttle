@@ -12,18 +12,19 @@ impl Repository {
         teacher: &User,
     ) -> anyhow::Result<Assignment> {
         const QUERY: &str = "INSERT INTO assignment AS a
-            (module_id, name, start, stop, description, type, subject_url, grader_url, repository_name, factor_percentage, grader_run_url)
-            SELECT m.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+            (module_id, name, start, stop, description, type, subject_url, grader_url, repository_name, factor_percentage, grader_run_url, hidden_by_teacher)
+            SELECT m.id, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
             FROM module m, teacher_module tm
             WHERE
               m.uuid::varchar = $1
               AND m.id = tm.module_id
-              AND tm.teacher_id = $12
+              AND tm.teacher_id = $2
             RETURNING a.*, a.type as a_type, a.uuid::varchar as uuid
             ";
 
         sqlx::query_as::<_, Assignment>(QUERY)
             .bind(module_uuid)
+            .bind(teacher.id)
             .bind(&assignment.name)
             .bind(assignment.start)
             .bind(assignment.stop)
@@ -34,7 +35,7 @@ impl Repository {
             .bind(&assignment.repository_name)
             .bind(assignment.factor_percentage)
             .bind(&assignment.grader_run_url)
-            .bind(teacher.id)
+            .bind(assignment.hidden_by_teacher)
             .fetch_one(&self.pool)
             .await
             .context(format!("[sql] create_assignment(module_uuid={module_uuid:?}, assignment={assignment:?}, teacher={teacher:?})"))
@@ -58,7 +59,8 @@ impl Repository {
             a.grader_url,
             a.repository_name,
             a.factor_percentage,
-            a.grader_run_url
+            a.grader_run_url,
+            a.hidden_by_teacher
             FROM assignment a
             JOIN module m ON m.id = a.module_id
             JOIN teacher_module tm ON tm.module_id = m.id
@@ -88,22 +90,23 @@ impl Repository {
     ) -> anyhow::Result<Assignment> {
         const QUERY: &str = "\
             UPDATE assignment AS a SET
-              name = $3,
-              start = $4,
-              stop = $5,
-              description = $6,
-              type = $7,
-              subject_url = $8,
-              grader_url = $9,
-              repository_name = $10,
-              factor_percentage = $11,
-              grader_run_url = $12
+              name = $4,
+              start = $5,
+              stop = $6,
+              description = $7,
+              type = $8,
+              subject_url = $9,
+              grader_url = $10,
+              repository_name = $11,
+              factor_percentage = $12,
+              grader_run_url = $13,
+              hidden_by_teacher = $14
             FROM module AS m
             JOIN teacher_module tm ON tm.module_id = m.id
             WHERE m.id = a.module_id
                 AND m.uuid::varchar = $1
                 AND a.uuid::varchar = $2
-                AND tm.teacher_id = $13
+                AND tm.teacher_id = $3
             RETURNING a.*, a.type as a_type, a.uuid::varchar as uuid
         ";
 
@@ -112,6 +115,7 @@ impl Repository {
         sqlx::query_as::<_, Assignment>(QUERY)
             .bind(module_uuid)
             .bind(uuid)
+            .bind(teacher.id)
             .bind(&assignment.name)
             .bind(assignment.start)
             .bind(assignment.stop)
@@ -122,7 +126,7 @@ impl Repository {
             .bind(&assignment.repository_name)
             .bind(assignment.factor_percentage)
             .bind(&assignment.grader_run_url)
-            .bind(teacher.id)
+            .bind(assignment.hidden_by_teacher)
             .fetch_one(&self.pool)
             .await
             .context(format!("[sql] update_assignment(module_uuid={module_uuid:?}, uuid={uuid:?}, assignment={assignment:?}, teacher={teacher:?})"))

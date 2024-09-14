@@ -80,7 +80,7 @@ impl Repository {
     pub async fn upsert_grading_task(
         &self,
         task: &NewGradingTask,
-    ) -> anyhow::Result<OffsetDateTime> {
+    ) -> anyhow::Result<Option<OffsetDateTime>> {
         match task {
             NewGradingTask::Internal {
                 user_assignment_id,
@@ -112,10 +112,15 @@ impl Repository {
         user_provider_name: &str,
         repository: &str,
         grader_repository: &str,
-    ) -> anyhow::Result<OffsetDateTime> {
+    ) -> anyhow::Result<Option<OffsetDateTime>> {
         const QUERY: &str = "INSERT INTO grading_task
           (user_assignment_id, user_provider_login, status, repository, grader_repository, updated_at)
-        VALUES ($1, $2, $3, $4, $5, NOW())
+        SELECT ua.id, $2, $3, $4, $5, NOW())
+        FROM user_assignment ua, assignment a
+        WHERE
+          ua.id = $1
+          AND ua.assignment_id = a.id
+          AND NOW() BETWEEN a.start AND a.stop
         ON CONFLICT (user_assignment_id, user_provider_login, status) DO UPDATE
         SET updated_at = NOW()
         RETURNING updated_at";
@@ -126,7 +131,7 @@ impl Repository {
             .bind(GradingStatus::QUEUED.to_string())
             .bind(repository)
             .bind(grader_repository)
-            .fetch_one(&self.pool)
+            .fetch_optional(&self.pool)
             .await
             .context(format!("[sql] upsert_grading_task_internal(user_assignment_id={user_assignment_id:?}, user_provider_name={user_provider_name:?}, repository={repository:?}, grader_repository={grader_repository:?})"))
     }
@@ -135,7 +140,7 @@ impl Repository {
         &self,
         assignment_uuid: &str,
         user_uuid: &str,
-    ) -> anyhow::Result<OffsetDateTime> {
+    ) -> anyhow::Result<Option<OffsetDateTime>> {
         const QUERY: &str = "INSERT INTO grading_task
           (user_assignment_id, user_provider_login, status, repository, grader_repository, updated_at)
         SELECT ua.id, u.provider_login, $3, a.repository_name, a.grader_url, NOW()
@@ -145,6 +150,7 @@ impl Repository {
           AND ua.assignment_id = a.id
           AND a.uuid::varchar = $1
           AND u.uuid::varchar = $2
+          AND NOW() BETWEEN a.start AND a.stop
         ON CONFLICT (user_assignment_id, user_provider_login, status) DO UPDATE
         SET updated_at = NOW()
         RETURNING updated_at";
@@ -153,7 +159,7 @@ impl Repository {
             .bind(assignment_uuid)
             .bind(user_uuid)
             .bind(GradingStatus::QUEUED.to_string())
-            .fetch_one(&self.pool)
+            .fetch_optional(&self.pool)
             .await
             .context(format!("[sql] upsert_grading_task_external(assignment_uuid={assignment_uuid:?}, user_uuid={user_uuid:?})"))
     }

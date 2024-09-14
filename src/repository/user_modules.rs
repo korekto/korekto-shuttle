@@ -27,6 +27,7 @@ const MATCHING_ASSIGNMENTS_CTE: &str = "\
 		  JOIN \"user\" u ON u.id = um.user_id
           LEFT JOIN user_assignment ua ON ua.assignment_id = a.id AND ua.user_id = u.id
           WHERE u.id = $1
+            AND a.hidden_by_teacher IS NOT TRUE
           ORDER BY a.id asc
         )
     ";
@@ -60,7 +61,7 @@ impl Repository {
             m.stop,
             count(a.id) as assignment_count
             FROM \"module\" m
-            LEFT JOIN assignment a ON a.module_id = m.id
+            LEFT JOIN assignment a ON a.module_id = m.id AND a.hidden_by_teacher IS NOT TRUE
             WHERE m.unlock_key = $1
             GROUP BY m.id";
 
