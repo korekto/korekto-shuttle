@@ -136,7 +136,7 @@ async fn trigger_grading(
         .upsert_grading_task(&NewGradingTask::External {
             assignment_uuid: assignment_id.clone(),
             user_uuid: user.uuid.clone(),
-        })
+        }, true)
         .await
         .map(Json)
         .map_err(|err| {

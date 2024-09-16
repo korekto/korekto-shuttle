@@ -69,12 +69,15 @@ impl Service {
             .await?;
         for retained_assignment in retained_repos {
             self.repo
-                .upsert_grading_task(&NewGradingTask::Internal {
-                    user_assignment_id: retained_assignment.id,
-                    user_provider_name: user_provider_login.to_string(),
-                    repository: retained_assignment.repository_name,
-                    grader_repository: retained_assignment.grader_url,
-                })
+                .upsert_grading_task(
+                    &NewGradingTask::Internal {
+                        user_assignment_id: retained_assignment.id,
+                        user_provider_name: user_provider_login.to_string(),
+                        repository: retained_assignment.repository_name,
+                        grader_repository: retained_assignment.grader_url,
+                    },
+                    true,
+                )
                 .await?;
         }
         Ok(())
