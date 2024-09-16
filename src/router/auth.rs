@@ -37,13 +37,10 @@ pub async fn logout(jar: CookieJar) -> (CookieJar, Redirect) {
     (remove_session_id_cookie(jar), Redirect::to("/"))
 }
 
-#[derive(Debug)]
 pub struct AuthenticatedUser(pub User);
 
-#[derive(Debug)]
 pub struct AdminUser(pub User);
 
-#[derive(Debug)]
 pub struct TeacherUser(pub User);
 
 #[async_trait]

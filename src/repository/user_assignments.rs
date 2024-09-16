@@ -133,7 +133,7 @@ impl Repository {
             .fetch_optional(&self.pool)
             .await
             .context(format!(
-                "[sql] get_assignment(user={user:?}, module_uuid={module_uuid:?}, assignment_uuid={assignment_uuid:?}, min_execution_interval_in_secs={min_execution_interval_in_secs:?})"
+                "[sql] get_assignment(user={user}, module_uuid={module_uuid:?}, assignment_uuid={assignment_uuid:?}, min_execution_interval_in_secs={min_execution_interval_in_secs:?})"
             ))
     }
 

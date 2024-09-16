@@ -49,7 +49,7 @@ async fn get_assignment(
         )
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, module_id, ?assignment_id, "[http] get_assignment");
+            error!(error = ?err, %user, module_id, ?assignment_id, "[http] get_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?
         .ok_or(StatusCode::NOT_FOUND)?;
@@ -67,7 +67,7 @@ async fn get_module(
         .get_module(&user, &module_id)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, module_id, "[http] get_module");
+            error!(error = ?err, %user, module_id, "[http] get_module");
             StatusCode::INTERNAL_SERVER_ERROR
         })?
         .ok_or(StatusCode::NOT_FOUND)?;
@@ -84,7 +84,7 @@ async fn list_modules(
         .list_modules(&user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, "[http] list_modules");
+            error!(error = ?err, %user, "[http] list_modules");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
     let resp = VecInto::<UserModuleDescResponse>::vec_into(modules);
@@ -103,7 +103,7 @@ async fn redeem_module(
         .redeem_module(&query.key, &user)
         .await
         .map_err(|err| {
-            warn!(error = %err, ?user, ?query, "[http] redeem_module: Unable to redeem module");
+            warn!(error = ?err, %user, ?query, "[http] redeem_module: Unable to redeem module");
             StatusCode::FORBIDDEN
         })?;
 
@@ -140,7 +140,7 @@ async fn trigger_grading(
         .await
         .map(Json)
         .map_err(|err| {
-            error!(error = %err, ?user, ?module_id, ?assignment_id, "[http] trigger_grading: Unable to trigger grading");
+            error!(error = ?err, %user, ?module_id, ?assignment_id, "[http] trigger_grading: Unable to trigger grading");
             StatusCode::FORBIDDEN
         })
 }
@@ -159,7 +159,7 @@ async fn sync_repo(
                 SyncError::AssignmentNotFound => StatusCode::NOT_FOUND,
                 SyncError::UserInstallationUnknown => StatusCode::NOT_IMPLEMENTED,
                 SyncError::BadInstallationId | SyncError::Unknown(_) => {
-                    error!(error = ?err, ?user, ?module_id, ?assignment_id, "[http] sync_repo: Unable to sync repo");
+                    error!(error = ?err, %user, ?module_id, ?assignment_id, "[http] sync_repo: Unable to sync repo");
                     StatusCode::INTERNAL_SERVER_ERROR},
             }
         })

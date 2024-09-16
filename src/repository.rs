@@ -2,6 +2,7 @@ use sqlx::{PgPool, Postgres, Transaction};
 
 mod db;
 mod delete_users_by_id;
+mod error;
 mod find_user;
 mod find_users;
 pub mod grading_task;

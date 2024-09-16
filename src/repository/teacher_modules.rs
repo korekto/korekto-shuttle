@@ -26,7 +26,7 @@ impl Repository {
             .bind(teacher.id)
             .fetch_all(&self.pool)
             .await
-            .context(format!("[sql] find_modules(teacher={teacher:?})"))
+            .context(format!("[sql] find_modules(teacher={teacher})"))
     }
 
     pub async fn create_module(
@@ -66,7 +66,7 @@ impl Repository {
             .fetch_one(&mut *transaction)
             .await
             .context(format!(
-                "[sql] create_module/module(teacher={teacher:?}, module={module:?})"
+                "[sql] create_module/module(teacher={teacher}, module={module:?})"
             ))?;
 
         sqlx::query(TEACHER_RELATION_QUERY)
@@ -75,13 +75,13 @@ impl Repository {
             .execute(&mut *transaction)
             .await
             .context(format!(
-                "[sql] create_module/teacher_relation(teacher={teacher:?})"
+                "[sql] create_module/teacher_relation(teacher={teacher})"
             ))?;
 
         transaction
             .commit()
             .await
-            .context(format!("[sql] create_module/tx(teacher={teacher:?})"))?;
+            .context(format!("[sql] create_module/tx(teacher={teacher})"))?;
 
         Ok(row)
     }
@@ -121,7 +121,7 @@ impl Repository {
             .bind(teacher.id)
             .fetch_one(&self.pool)
             .await
-            .context(format!("[sql] find_module(uuid={uuid}teacher={teacher:?})"))
+            .context(format!("[sql] find_module(uuid={uuid}teacher={teacher})"))
     }
 
     pub async fn update_module(
@@ -174,7 +174,7 @@ impl Repository {
             .fetch_one(&self.pool)
             .await
             .context(format!(
-                "[sql] update_module(uuid={uuid}, module={module:?}, teacher={teacher:?})"
+                "[sql] update_module(uuid={uuid}, module={module:?}, teacher={teacher})"
             ))
     }
 
@@ -194,7 +194,7 @@ impl Repository {
             .await
             .map(|r| r.rows_affected())
             .context(format!(
-                "[sql] delete_modules(uuids={uuids:?}, teacher={teacher:?})"
+                "[sql] delete_modules(uuids={uuids:?}, teacher={teacher})"
             ))
     }
 
@@ -248,7 +248,7 @@ impl Repository {
             .fetch_all(&self.pool)
             .await
             .context(format!(
-                "[sql] get_module_grades(uuid={uuid:?}, teacher={teacher:?})"
+                "[sql] get_module_grades(uuid={uuid:?}, teacher={teacher})"
             ))
     }
 }

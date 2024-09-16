@@ -33,7 +33,7 @@ async fn on_github_event(
         &state.config.github_app_webhook_secret,
         &signature,
     ) {
-        debug!(error = %err, ?event_type, "Received webhook with invalid signature");
+        debug!(error = ?err, ?event_type, "Received webhook with invalid signature");
     } else {
         match parse_event(&event_type, &payload) {
             Ok(result) => {
@@ -46,7 +46,7 @@ async fn on_github_event(
                     .insert_unparseable_webhook("github", &event_type, &payload, &err.to_string())
                     .await
                 {
-                    error!(error = %err, ?event_type, ?payload, "[http] on_github_event");
+                    error!(error = ?err, ?event_type, ?payload, "[http] on_github_event");
                 }
             }
         }
@@ -62,7 +62,7 @@ async fn on_github_runner_event(
     match payload_result {
         Ok(Json(payload)) => {
             state.gh_runner.verify_jwt(bearer.token()).map_err(|err| {
-                debug!(error = %err, token = bearer.token(), ?payload, "[http] on_github_runner_event: Invalid JWT");
+                debug!(error = ?err, token = bearer.token(), ?payload, "[http] on_github_runner_event: Invalid JWT");
                 (StatusCode::UNAUTHORIZED, format!("{err:?}"))
             })?;
 
@@ -71,12 +71,12 @@ async fn on_github_runner_event(
                 .on_runner_webhook(&payload)
                 .await
                 .map_err(|err| {
-                    error!(error = %err, ?payload, "[http] on_github_runner_event: Unknown error");
+                    error!(error = ?err, ?payload, "[http] on_github_runner_event: Unknown error");
                     (StatusCode::INTERNAL_SERVER_ERROR, format!("{err:?}"))
                 })?;
         }
         Err(err) => {
-            error!(error = %err, "[http] on_github_runner_event: Invalid JSON");
+            error!(error = ?err, payload = err.body_text(), "[http] on_github_runner_event: Invalid JSON");
         }
     }
 

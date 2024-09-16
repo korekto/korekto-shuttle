@@ -25,6 +25,7 @@ pub fn router() -> Router<AppState> {
         .route("/db", delete(recreate_db))
         .route("/user", get(get_users).delete(delete_users))
         .route("/teacher", patch(set_users_teacher))
+        .route("/error", get(trigger_error))
         .route(
             "/unparseable_webhooks",
             get(get_unparseable_webhooks).delete(delete_unparseable_webhooks),
@@ -154,7 +155,7 @@ async fn set_users_teacher(
 }
 
 async fn get_unparseable_webhooks(
-    user: AdminUser,
+    AdminUser(user): AdminUser,
     State(state): State<AppState>,
     Query(pagination): Query<PaginationQuery>,
 ) -> Result<Json<Page<UnparseableWebhookResponse>>, (StatusCode, Json<String>)> {
@@ -167,7 +168,7 @@ async fn get_unparseable_webhooks(
             .get_unparseable_webhooks(&pagination)
             .await
             .map_err(|err| {
-                error!(error = %err, ?user, ?pagination, "[http] get_unparseable_webhooks");
+                error!(error = ?err, %user, ?pagination, "[http] get_unparseable_webhooks");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(StatusCode::INTERNAL_SERVER_ERROR.to_string()),
@@ -177,7 +178,7 @@ async fn get_unparseable_webhooks(
 }
 
 async fn delete_unparseable_webhooks(
-    user: AdminUser,
+    AdminUser(user): AdminUser,
     State(state): State<AppState>,
 ) -> Result<(), StatusCode> {
     state
@@ -186,14 +187,14 @@ async fn delete_unparseable_webhooks(
         .delete_unparseable_webhooks()
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, "[http] delete_unparseable_webhooks");
+            error!(error = ?err, %user, "[http] delete_unparseable_webhooks");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
     Ok(())
 }
 
 async fn get_grading_tasks(
-    user: AdminUser,
+    AdminUser(user): AdminUser,
     State(state): State<AppState>,
     Query(pagination): Query<PaginationQuery>,
 ) -> Result<Json<Page<GradingTaskResponse>>, (StatusCode, Json<String>)> {
@@ -206,11 +207,27 @@ async fn get_grading_tasks(
             .get_grading_tasks(&pagination)
             .await
             .map_err(|err| {
-                error!(error = %err, ?user, ?pagination, "[http] get_grading_tasks");
+                error!(error = ?err, %user, ?pagination, "[http] get_grading_tasks");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(StatusCode::INTERNAL_SERVER_ERROR.to_string()),
                 )
             })?,
     ))
+}
+
+async fn trigger_error(
+    AdminUser(user): AdminUser,
+    State(state): State<AppState>,
+) -> Result<(), StatusCode> {
+    state
+        .service
+        .repo
+        .trigger_error(&user)
+        .await
+        .map_err(|err| {
+            error!(error = ?err, %user, "[http] trigger_error");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    Ok(())
 }
