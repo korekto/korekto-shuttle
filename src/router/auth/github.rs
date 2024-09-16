@@ -78,7 +78,7 @@ pub async fn gh_login_authorized(
                     let user_flow = decide_user_flow(&token, &user_logged, &state).await;
                     match user_flow {
                         Err(err) => {
-                            error!(error = %err, "[http] gh_login_authorized: Unexpected error in user flow");
+                            error!(error = ?err, "[http] gh_login_authorized: Unexpected error in user flow");
                             // TODO maybe some 500 page with info
                             (jar, Ok(Redirect::to("/")))
                         }
@@ -89,13 +89,13 @@ pub async fn gh_login_authorized(
                     }
                 }
                 Err(err) => {
-                    error!(error = %err, "[http] gh_login_authorized: Unexpected error in user info retrieval");
+                    error!(error = ?err, "[http] gh_login_authorized: Unexpected error in user info retrieval");
                     (jar, Err(StatusCode::FORBIDDEN))
                 }
             }
         }
         Err(err) => {
-            error!(error = %err, "[http] gh_login_authorized: Error while retrieving GH tokens");
+            error!(error = ?err, "[http] gh_login_authorized: Error while retrieving GH tokens");
             (jar, Err(StatusCode::FORBIDDEN))
         }
     }
@@ -114,7 +114,7 @@ pub async fn gh_post_install(
             .update_installation_id(&user.id, &installation_id)
             .await;
         if let Err(err) = result {
-            error!(error = %err, ?installation_id, provider_login = ?&user.provider_login, "[http] gh_post_install: Failed to store installation_id");
+            error!(error = ?err, ?installation_id, provider_login = ?&user.provider_login, "[http] gh_post_install: Failed to store installation_id");
         }
     }
 

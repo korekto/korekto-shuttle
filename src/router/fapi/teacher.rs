@@ -35,33 +35,33 @@ pub fn router() -> Router<AppState> {
 }
 
 async fn get_modules(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
 ) -> Result<Json<Vec<TeacherModuleDescResponse>>, StatusCode> {
     let modules = state
         .service
         .repo
-        .find_modules(&user.0)
+        .find_modules(&user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, "[http] get_modules");
+            error!(error = ?err, %user, "[http] get_modules");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
     Ok(Json(modules.vec_into()))
 }
 
 async fn create_module(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
     Json(module): Json<NewModule>,
 ) -> Result<Json<TeacherModuleResponse>, StatusCode> {
     let module = state
         .service
         .repo
-        .create_module(&module, &user.0)
+        .create_module(&module, &user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, "[http] create_module");
+            error!(error = ?err, %user, "[http] create_module");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -69,17 +69,17 @@ async fn create_module(
 }
 
 async fn get_module(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
 ) -> Result<Json<TeacherModuleResponse>, StatusCode> {
     let module = state
         .service
         .repo
-        .find_module(&module_id, &user.0)
+        .find_module(&module_id, &user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, module_id, "[http] get_module");
+            error!(error = ?err, %user, module_id, "[http] get_module");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -87,7 +87,7 @@ async fn get_module(
 }
 
 async fn update_module(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
     Json(module): Json<NewModule>,
@@ -95,10 +95,10 @@ async fn update_module(
     let module = state
         .service
         .repo
-        .update_module(&module_id, &module, &user.0)
+        .update_module(&module_id, &module, &user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, module_id, "[http] update_module");
+            error!(error = ?err, %user, module_id, "[http] update_module");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -106,17 +106,17 @@ async fn update_module(
 }
 
 async fn delete_modules(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
     Json(module_ids): Json<Vec<String>>,
 ) -> Result<(), StatusCode> {
     state
         .service
         .repo
-        .delete_modules(&module_ids, &user.0)
+        .delete_modules(&module_ids, &user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, ?module_ids, "[http] delete_modules");
+            error!(error = ?err, %user, ?module_ids, "[http] delete_modules");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -124,24 +124,24 @@ async fn delete_modules(
 }
 
 async fn get_grades(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
 ) -> Result<Json<ModuleGradesResponse>, StatusCode> {
     Ok(Json(
         state
             .service
-            .get_module_grades(&module_id, &user.0)
+            .get_module_grades(&module_id, &user)
             .await
             .map_err(|err| {
-                error!(error = %err, ?user, module_id, "[http] delete_modules");
+                error!(error = ?err, %user, module_id, "[http] delete_modules");
                 StatusCode::INTERNAL_SERVER_ERROR
             })?,
     ))
 }
 
 async fn create_assignment(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
     Json(assignment): Json<NewAssignment>,
@@ -149,10 +149,10 @@ async fn create_assignment(
     let assignment = state
         .service
         .repo
-        .create_assignment(&module_id, &assignment, &user.0)
+        .create_assignment(&module_id, &assignment, &user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, module_id, "[http] create_assignment");
+            error!(error = ?err, %user, module_id, "[http] create_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -160,17 +160,17 @@ async fn create_assignment(
 }
 
 async fn get_assignment(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
     Path((module_id, assignment_id)): Path<(String, String)>,
 ) -> Result<Json<TeacherAssignmentResponse>, StatusCode> {
     let assignment = state
         .service
         .repo
-        .find_assignment(&module_id, &assignment_id, &user.0)
+        .find_assignment(&module_id, &assignment_id, &user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, module_id, assignment_id, "[http] get_assignment");
+            error!(error = ?err, %user, module_id, assignment_id, "[http] get_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -178,7 +178,7 @@ async fn get_assignment(
 }
 
 async fn update_assignment(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
     Path((module_id, assignment_id)): Path<(String, String)>,
     Json(assignment): Json<NewAssignment>,
@@ -186,10 +186,10 @@ async fn update_assignment(
     let assignment = state
         .service
         .repo
-        .update_assignment(&module_id, &assignment_id, &assignment, &user.0)
+        .update_assignment(&module_id, &assignment_id, &assignment, &user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, module_id, assignment_id, "[http] update_assignment");
+            error!(error = ?err, %user, module_id, assignment_id, "[http] update_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 
@@ -197,7 +197,7 @@ async fn update_assignment(
 }
 
 async fn delete_assignments(
-    user: TeacherUser,
+    TeacherUser(user): TeacherUser,
     State(state): State<AppState>,
     Path(module_id): Path<String>,
     Json(assignment_ids): Json<Vec<String>>,
@@ -205,10 +205,10 @@ async fn delete_assignments(
     state
         .service
         .repo
-        .delete_assignments(&module_id, &assignment_ids, &user.0)
+        .delete_assignments(&module_id, &assignment_ids, &user)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, module_id, ?assignment_ids, "[http] update_assignment");
+            error!(error = ?err, %user, module_id, ?assignment_ids, "[http] update_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 

@@ -38,7 +38,7 @@ impl Repository {
             .bind(assignment.hidden_by_teacher)
             .fetch_one(&self.pool)
             .await
-            .context(format!("[sql] create_assignment(module_uuid={module_uuid:?}, assignment={assignment:?}, teacher={teacher:?})"))
+            .context(format!("[sql] create_assignment(module_uuid={module_uuid:?}, assignment={assignment:?}, teacher={teacher})"))
     }
 
     pub async fn find_assignment(
@@ -78,7 +78,7 @@ impl Repository {
             .bind(teacher.id)
             .fetch_one(&self.pool)
             .await
-            .context(format!("[sql] find_assignment(module_uuid={module_uuid:?}, uuid={uuid:?}, teacher={teacher:?})"))
+            .context(format!("[sql] find_assignment(module_uuid={module_uuid:?}, uuid={uuid:?}, teacher={teacher})"))
     }
 
     pub async fn update_assignment(
@@ -129,7 +129,7 @@ impl Repository {
             .bind(assignment.hidden_by_teacher)
             .fetch_one(&self.pool)
             .await
-            .context(format!("[sql] update_assignment(module_uuid={module_uuid:?}, uuid={uuid:?}, assignment={assignment:?}, teacher={teacher:?})"))
+            .context(format!("[sql] update_assignment(module_uuid={module_uuid:?}, uuid={uuid:?}, assignment={assignment:?}, teacher={teacher})"))
     }
 
     pub async fn delete_assignments(

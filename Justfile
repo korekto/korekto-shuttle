@@ -43,7 +43,7 @@ integration-test-with-available-pg:
   cargo nextest run -v --test-threads 1 --test '*' --features tests-with-docker --hide-progress-bar --success-output immediate --failure-output immediate
 
 run:
-   export RUST_BACKTRACE=1 && cargo shuttle run
+   cargo shuttle run
 
 rund:
    export RUST_LOG="debug" && export RUST_BACKTRACE=1 && just run

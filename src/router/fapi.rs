@@ -41,7 +41,7 @@ async fn update_self(
         .update_user_profile(&user.id, &update)
         .await
         .map_err(|err| {
-            error!(error = %err, ?user, ?update, "[http] update_self");
+            error!(error = ?err, %user, ?update, "[http] update_self");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 

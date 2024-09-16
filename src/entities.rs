@@ -21,7 +21,7 @@ pub struct NewUser {
     pub github_user_tokens: Option<Json<GitHubUserTokens>>,
 }
 
-#[derive(sqlx::FromRow, Debug, Clone)]
+#[derive(sqlx::FromRow, Clone)]
 pub struct User {
     pub id: i32,
     pub uuid: String,
@@ -44,8 +44,13 @@ impl fmt::Display for User {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "provider_login={}, provider_name={}, provider_email={}",
-            self.provider_login, self.provider_name, self.provider_email
+            "id={}, uuid={} provider_login={}, first_name={}, last_name={}, school_email={}",
+            self.id,
+            self.uuid,
+            self.provider_login,
+            self.first_name,
+            self.last_name,
+            self.school_email
         )
     }
 }

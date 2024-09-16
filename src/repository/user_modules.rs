@@ -45,7 +45,7 @@ impl Repository {
             .await
             .map(|_| ())
             .context(format!(
-                "[sql] create_user_module(user={user:?}, module_id={module_id:?})"
+                "[sql] create_user_module(user={user}, module_id={module_id:?})"
             ))
     }
 
@@ -98,7 +98,7 @@ impl Repository {
             .bind(user.id)
             .fetch_all(&self.pool)
             .await
-            .context(format!("[sql] list_modules(user={user:?})"))
+            .context(format!("[sql] list_modules(user={user})"))
     }
 
     pub async fn get_module(
@@ -134,7 +134,7 @@ impl Repository {
             .fetch_optional(&self.pool)
             .await
             .context(format!(
-                "[sql] get_module(user={user:?}, module_uuid={module_uuid:?})"
+                "[sql] get_module(user={user}, module_uuid={module_uuid:?})"
             ))
     }
 }
