@@ -111,8 +111,16 @@ impl Service {
         )
         .await?;
         let metadata = GradingMetadata {
-            short_commit_id: event.metadata.short_commit_id.clone(),
-            commit_url: event.metadata.commit_url.clone(),
+            short_commit_id: event
+                .metadata
+                .short_commit_id
+                .clone()
+                .unwrap_or_else(|| "none".to_string()),
+            commit_url: event
+                .metadata
+                .commit_url
+                .clone()
+                .unwrap_or_else(|| "none".to_string()),
             full_log_url: event.full_log_url.clone(),
         };
         Repository::update_assignment_current_grading_metadata(
@@ -143,8 +151,16 @@ impl Service {
         if let Some(details) = &event.details {
             let grade = NewGradeRequest {
                 time: Some(OffsetDateTime::now_utc()),
-                short_commit_id: event.metadata.short_commit_id.clone(),
-                commit_url: event.metadata.commit_url.clone(),
+                short_commit_id: event
+                    .metadata
+                    .short_commit_id
+                    .clone()
+                    .unwrap_or_else(|| "none".to_string()),
+                commit_url: event
+                    .metadata
+                    .commit_url
+                    .clone()
+                    .unwrap_or_else(|| "none".to_string()),
                 grading_log_url: event.full_log_url.clone(),
                 details: details.parts.clone().vec_into(),
             };
