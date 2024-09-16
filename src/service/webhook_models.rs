@@ -38,9 +38,9 @@ pub struct RunnerGradePart {
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct RunnerMetadata {
-    pub commit_id: String,
-    pub short_commit_id: String,
-    pub commit_url: String,
+    pub commit_id: Option<String>,
+    pub short_commit_id: Option<String>,
+    pub commit_url: Option<String>,
 }
 
 #[cfg(test)]
@@ -63,9 +63,9 @@ mod tests {
             full_log_url: "https://github.com/lernejo/korekto-runner/actions/runs/9255315322".to_string(),
             details: None,
             metadata: RunnerMetadata {
-                commit_id: "cb2fa5425250371d70a9d06f4fb7202cd62b7738".to_string(),
-                short_commit_id: "cb2fa54".to_string(),
-                commit_url: "https://github.com/ledoyen/java_exercise_1/commit/cb2fa5425250371d70a9d06f4fb7202cd62b7738".to_string(),
+                commit_id: Some("cb2fa5425250371d70a9d06f4fb7202cd62b7738".to_string()),
+                short_commit_id: Some("cb2fa54".to_string()),
+                commit_url: Some("https://github.com/ledoyen/java_exercise_1/commit/cb2fa5425250371d70a9d06f4fb7202cd62b7738".to_string()),
             },
         })
     }
