@@ -32,6 +32,10 @@ pub fn router() -> Router<AppState> {
             "/module/:module_id/assignment/:assignment_id",
             get(get_assignment).put(update_assignment),
         )
+        .route(
+            "/module/:module_id/assignment/:assignment_id/grade",
+            post(trigger_mass_grading_for_assignment),
+        )
 }
 
 async fn get_modules(
@@ -209,6 +213,23 @@ async fn delete_assignments(
         .await
         .map_err(|err| {
             error!(error = ?err, %user, module_id, ?assignment_ids, "[http] update_assignment");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(())
+}
+
+async fn trigger_mass_grading_for_assignment(
+    TeacherUser(user): TeacherUser,
+    State(state): State<AppState>,
+    Path((module_id, assignment_id)): Path<(String, String)>,
+) -> Result<(), StatusCode> {
+    state
+        .service
+        .trigger_mass_grading_for_assignment(&module_id, &assignment_id, &user)
+        .await
+        .map_err(|err| {
+            error!(error = ?err, %user, module_id, assignment_id, "[http] trigger_mass_grading_for_assignment");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
 

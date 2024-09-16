@@ -224,6 +224,7 @@ impl Repository {
               u.first_name,
               u.last_name,
               u.school_email,
+              u.provider_login,
               json_agg(
                 json_build_object(
                   'type', ea.type,

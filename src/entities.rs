@@ -22,6 +22,7 @@ pub struct NewUser {
 }
 
 #[derive(sqlx::FromRow, Clone)]
+#[cfg_attr(feature = "automatic_test_feature", derive(Debug))]
 pub struct User {
     pub id: i32,
     pub uuid: String,
@@ -364,8 +365,19 @@ pub struct StudentGrades {
     pub first_name: String,
     pub last_name: String,
     pub school_email: String,
+    pub provider_login: String,
     pub grades: Json<Vec<AssignmentGrade>>,
     pub total: f32,
+}
+
+impl fmt::Display for StudentGrades {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "first_name={}, last_name={}, provider_login={}, school_email={}",
+            self.first_name, self.last_name, self.provider_login, self.school_email
+        )
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]

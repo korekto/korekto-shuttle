@@ -80,6 +80,7 @@ impl Repository {
     pub async fn upsert_grading_task(
         &self,
         task: &NewGradingTask,
+        enforce_time_window: bool,
     ) -> anyhow::Result<Option<OffsetDateTime>> {
         match task {
             NewGradingTask::Internal {
@@ -93,6 +94,7 @@ impl Repository {
                     user_provider_name,
                     repository,
                     grader_repository,
+                    enforce_time_window,
                 )
                 .await
             }
@@ -100,7 +102,7 @@ impl Repository {
                 assignment_uuid,
                 user_uuid,
             } => {
-                self.upsert_grading_task_external(assignment_uuid, user_uuid)
+                self.upsert_grading_task_external(assignment_uuid, user_uuid, enforce_time_window)
                     .await
             }
         }
@@ -112,20 +114,27 @@ impl Repository {
         user_provider_name: &str,
         repository: &str,
         grader_repository: &str,
+        enforce_time_window: bool,
     ) -> anyhow::Result<Option<OffsetDateTime>> {
-        const QUERY: &str = "INSERT INTO grading_task
+        let time_window_clause = if enforce_time_window {
+            "AND NOW() BETWEEN a.start AND a.stop "
+        } else {
+            ""
+        };
+
+        let query = format!("INSERT INTO grading_task
           (user_assignment_id, user_provider_login, status, repository, grader_repository, updated_at)
         SELECT ua.id, $2, $3, $4, $5, NOW())
         FROM user_assignment ua, assignment a
         WHERE
           ua.id = $1
           AND ua.assignment_id = a.id
-          AND NOW() BETWEEN a.start AND a.stop
+          {time_window_clause}
         ON CONFLICT (user_assignment_id, user_provider_login, status) DO UPDATE
         SET updated_at = NOW()
-        RETURNING updated_at";
+        RETURNING updated_at");
 
-        sqlx::query_scalar(QUERY)
+        sqlx::query_scalar(&query)
             .bind(user_assignment_id)
             .bind(user_provider_name)
             .bind(GradingStatus::QUEUED.to_string())
@@ -140,8 +149,15 @@ impl Repository {
         &self,
         assignment_uuid: &str,
         user_uuid: &str,
+        enforce_time_window: bool,
     ) -> anyhow::Result<Option<OffsetDateTime>> {
-        const QUERY: &str = "INSERT INTO grading_task
+        let time_window_clause = if enforce_time_window {
+            "AND NOW() BETWEEN a.start AND a.stop "
+        } else {
+            ""
+        };
+
+        let query = format!("INSERT INTO grading_task
           (user_assignment_id, user_provider_login, status, repository, grader_repository, updated_at)
         SELECT ua.id, u.provider_login, $3, a.repository_name, a.grader_url, NOW()
         FROM user_assignment ua, \"user\" u, assignment a
@@ -150,12 +166,12 @@ impl Repository {
           AND ua.assignment_id = a.id
           AND a.uuid::varchar = $1
           AND u.uuid::varchar = $2
-          AND NOW() BETWEEN a.start AND a.stop
+          {time_window_clause} 
         ON CONFLICT (user_assignment_id, user_provider_login, status) DO UPDATE
         SET updated_at = NOW()
-        RETURNING updated_at";
+        RETURNING updated_at");
 
-        sqlx::query_scalar(QUERY)
+        sqlx::query_scalar(&query)
             .bind(assignment_uuid)
             .bind(user_uuid)
             .bind(GradingStatus::QUEUED.to_string())
