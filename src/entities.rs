@@ -362,6 +362,8 @@ pub struct GradingMetadata {
 
 #[derive(sqlx::FromRow, Debug, Clone)]
 pub struct StudentGrades {
+    pub id: i32,
+    pub uuid: String,
     pub first_name: String,
     pub last_name: String,
     pub school_email: String,

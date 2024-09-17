@@ -17,7 +17,7 @@ impl Service {
                 .upsert_grading_task(
                     &NewGradingTask::External {
                         assignment_uuid: assignment_uuid.to_string(),
-                        user_uuid: user.uuid.clone(),
+                        user_uuid: student.uuid.to_string(),
                     },
                     false,
                 )
