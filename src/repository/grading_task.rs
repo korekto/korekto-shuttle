@@ -283,7 +283,7 @@ impl Repository {
             .fetch_all(transaction)
             .await
             .context(format!("[sql] reserve_grading_tasks_to_execute_transact(min_execution_interval_in_secs={min_execution_interval_in_secs:?}, max_tasks={max_tasks:?})"))
-            .inspect(|res| info!("[sql] reserve_grading_tasks_to_execute_transact(min_execution_interval_in_secs={min_execution_interval_in_secs:?}, max_tasks={max_tasks:?}): reserved {} tasks", res.len()))
+            .inspect(|res| if !res.is_empty() {info!("[sql] reserve_grading_tasks_to_execute_transact(min_execution_interval_in_secs={min_execution_interval_in_secs:?}, max_tasks={max_tasks:?}): reserved {} tasks", res.len())})
     }
 
     pub async fn delete_grading_task(
