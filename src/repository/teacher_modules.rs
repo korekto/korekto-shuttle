@@ -221,6 +221,8 @@ impl Repository {
                 ORDER BY a.id
             )
             SELECT
+              u.id,
+              u.uuid::varchar as uuid,
               u.first_name,
               u.last_name,
               u.school_email,
