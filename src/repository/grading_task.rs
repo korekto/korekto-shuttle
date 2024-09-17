@@ -30,6 +30,7 @@ use sqlx::{Executor, Postgres};
 use std::fmt;
 use std::str::FromStr;
 use time::OffsetDateTime;
+use tracing::info;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub enum GradingStatus {
@@ -143,6 +144,7 @@ impl Repository {
             .fetch_optional(&self.pool)
             .await
             .context(format!("[sql] upsert_grading_task_internal(user_assignment_id={user_assignment_id:?}, user_provider_name={user_provider_name:?}, repository={repository:?}, grader_repository={grader_repository:?})"))
+            .inspect(|res| info!("[sql] upsert_grading_task_internal(user_assignment_id={user_assignment_id:?}, user_provider_name={user_provider_name:?}, repository={repository:?}, grader_repository={grader_repository:?}): {res:?}"))
     }
 
     async fn upsert_grading_task_external(
@@ -178,6 +180,7 @@ impl Repository {
             .fetch_optional(&self.pool)
             .await
             .context(format!("[sql] upsert_grading_task_external(assignment_uuid={assignment_uuid:?}, user_uuid={user_uuid:?})"))
+            .inspect(|res| info!("[sql] upsert_grading_task_external(assignment_uuid={assignment_uuid:?}, user_uuid={user_uuid:?}): {res:?}"))
     }
 
     pub async fn get_grading_tasks(
@@ -215,6 +218,12 @@ impl Repository {
             .context(format!(
                 "[sql] get_grading_tasks(page={page:?}, per_page={per_page:?})"
             ))
+            .inspect(|res| {
+                info!(
+                    "[sql] get_grading_tasks(page={page:?}, per_page={per_page:?}): {} items",
+                    res.len()
+                );
+            })
     }
 
     pub async fn reserve_grading_tasks_to_execute_transact<'e, 'c: 'e, E>(
@@ -274,6 +283,7 @@ impl Repository {
             .fetch_all(transaction)
             .await
             .context(format!("[sql] reserve_grading_tasks_to_execute_transact(min_execution_interval_in_secs={min_execution_interval_in_secs:?}, max_tasks={max_tasks:?})"))
+            .inspect(|res| info!("[sql] reserve_grading_tasks_to_execute_transact(min_execution_interval_in_secs={min_execution_interval_in_secs:?}, max_tasks={max_tasks:?}): reserved {} tasks", res.len()))
     }
 
     pub async fn delete_grading_task(
@@ -314,6 +324,7 @@ impl Repository {
             .fetch_one(transaction)
             .await
             .context(format!("[sql] delete_grading_task_transact(uuid={uuid:?}, error_message={error_message:?})"))
+            .inspect(|_| info!("[sql] delete_grading_task_transact(uuid={uuid:?}, error_message={error_message:?})"))
     }
 
     pub async fn update_grading_task_non_terminal_status(
@@ -351,6 +362,7 @@ impl Repository {
             .fetch_one(transaction)
             .await
             .context(format!("[sql] update_grading_task_non_terminal_status_transact(uuid={uuid:?}, status={status:?})"))
+            .inspect(|_| info!("[sql] update_grading_task_non_terminal_status_transact(uuid={uuid:?}, status={status:?})"))
     }
 
     pub async fn timeout_grading_tasks(
@@ -387,5 +399,6 @@ impl Repository {
             .fetch_one(&self.pool)
             .await
             .context(format!("[sql] timeout_grading_tasks(status={status:?}, min_creation_interval_in_secs={min_creation_interval_in_secs:?})"))
+            .inspect(|res| if *res > 0 {info!("[sql] timeout_grading_tasks(status={status:?}, min_creation_interval_in_secs={min_creation_interval_in_secs:?}): deleted {res} tasks")})
     }
 }
