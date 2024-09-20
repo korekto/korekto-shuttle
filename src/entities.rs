@@ -344,7 +344,10 @@ pub struct RawGradingTask {
     pub id: i32,
     pub uuid: String,
     pub user_assignment_id: i32,
+    pub user_provider_login: String,
+    pub repository: String,
     pub status: String,
+    pub updated_at: OffsetDateTime,
 }
 
 impl crate::service::trackable::WithTotalCount for GradingTask {

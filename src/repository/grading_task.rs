@@ -133,9 +133,9 @@ impl Repository {
           {time_window_clause}
         ON CONFLICT (user_assignment_id, user_provider_login, status) DO UPDATE
         SET updated_at = NOW()
-        RETURNING updated_at");
+        RETURNING *, uuid::varchar as uuid");
 
-        sqlx::query_scalar(&query)
+        let result = sqlx::query_as::<_, RawGradingTask>(&query)
             .bind(user_assignment_id)
             .bind(user_provider_name)
             .bind(GradingStatus::QUEUED.to_string())
@@ -144,7 +144,11 @@ impl Repository {
             .fetch_optional(&self.pool)
             .await
             .context(format!("[sql] upsert_grading_task_internal(user_assignment_id={user_assignment_id:?}, user_provider_name={user_provider_name:?}, repository={repository:?}, grader_repository={grader_repository:?})"))
-            .inspect(|res| info!("[sql] upsert_grading_task_internal(user_assignment_id={user_assignment_id:?}, user_provider_name={user_provider_name:?}, repository={repository:?}, grader_repository={grader_repository:?}): {res:?}"))
+            .inspect(|res|
+                info!("[sql] upsert_grading_task_internal(user_assignment_id={user_assignment_id:?}, user_provider_name={user_provider_name:?}, repository={repository:?}, grader_repository={grader_repository:?}): {res:?}")
+            )?;
+
+        Ok(result.map(|rgt| rgt.updated_at))
     }
 
     async fn upsert_grading_task_external(
@@ -161,7 +165,7 @@ impl Repository {
 
         let query = format!("INSERT INTO grading_task
           (user_assignment_id, user_provider_login, status, repository, grader_repository, updated_at)
-        SELECT ua.id, u.provider_login, $3, a.repository_name, a.grader_url, NOW()
+        SELECT ua.id, u.provider_login, $3, a.repfository_name, a.grader_url, NOW()
         FROM user_assignment ua, \"user\" u, assignment a
         WHERE
           ua.user_id = u.id
@@ -260,7 +264,7 @@ impl Repository {
               LIMIT $2
             ),
             grading_task_update as (
-              UPDATE grading_task gt SET status = $5
+              UPDATE grading_task gt SET status = $5, updated_at = NOW()
               FROM max_tasks mt
               WHERE mt.id = gt.id
               AND mt.status = $4
@@ -345,7 +349,7 @@ impl Repository {
     {
         const QUERY: &str = "\
             UPDATE grading_task
-            SET status = $2
+            SET status = $2, updated_at = NOW()
             WHERE uuid::varchar = $1
             RETURNING *, uuid::varchar as uuid
         ";
@@ -369,13 +373,13 @@ impl Repository {
         &self,
         status: &GradingStatus,
         min_creation_interval_in_secs: i32,
-    ) -> anyhow::Result<i32> {
+    ) -> anyhow::Result<usize> {
         const QUERY: &str = "\
             WITH deleted_grading_task AS (
                 DELETE FROM grading_task
                 WHERE
                   status = $1
-                  AND created_at < NOW() - interval '1 seconds' * $2
+                  AND updated_at < NOW() - interval '1 seconds' * $2
                 RETURNING *
             ), updated_user_assignment AS (
                 UPDATE user_assignment ua
@@ -388,17 +392,20 @@ impl Repository {
                 WHERE dgt.user_assignment_id = ua.id
                 RETURNING ua.*
             )
-            SELECT count(dgt.*)::integer
+            SELECT dgt.uuid::varchar
             FROM deleted_grading_task dgt
             LEFT JOIN updated_user_assignment uua ON uua.id = dgt.user_assignment_id
         ";
 
-        sqlx::query_scalar(QUERY)
+        let deleted_uuids : Vec<String> = sqlx::query_scalar(QUERY)
             .bind(status.to_string())
             .bind(min_creation_interval_in_secs)
-            .fetch_one(&self.pool)
+            .fetch_all(&self.pool)
             .await
             .context(format!("[sql] timeout_grading_tasks(status={status:?}, min_creation_interval_in_secs={min_creation_interval_in_secs:?})"))
-            .inspect(|res| if *res > 0 {info!("[sql] timeout_grading_tasks(status={status:?}, min_creation_interval_in_secs={min_creation_interval_in_secs:?}): deleted {res} tasks")})
+            .inspect(|res| if !res.is_empty() {
+                info!("[sql] timeout_grading_tasks(status={status:?}, min_creation_interval_in_secs={min_creation_interval_in_secs:?}): deleted {} tasks ({res:?})", res.len());
+            })?;
+        Ok(deleted_uuids.len())
     }
 }
