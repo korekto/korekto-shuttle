@@ -8,8 +8,8 @@ use tracing::warn;
 pub struct TaskStats {
     pub ordered: i32,
     pub errored: i32,
-    pub ordered_timeout: i32,
-    pub started_timeout: i32,
+    pub ordered_timeout: usize,
+    pub started_timeout: usize,
 }
 
 impl TaskStats {
