@@ -104,3 +104,11 @@ cargo shuttle deploy
 ```
 
 Check the running service at https://my-project-name.shuttleapp.rs
+
+
+## As a teacher
+
+Get an installation token for a user, then
+```bash
+git clone https://x-access-token:TOKEN@github.com/owner/repo.git repo_owner
+```
