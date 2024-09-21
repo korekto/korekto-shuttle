@@ -14,7 +14,7 @@ use crate::{
 
 #[derive(Clone)]
 pub struct ClientCache {
-    app_client: octocrab::Octocrab,
+    pub app_client: octocrab::Octocrab,
     inner_cache: Arc<Mutex<LruCache<u64, GitHubClient>>>,
     app_id: u64,
 }

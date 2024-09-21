@@ -1,10 +1,11 @@
-use axum::extract::Query;
+use axum::extract::{Path, Query};
 use axum::{
     extract::State,
     routing::{delete, get, patch},
     Json, Router,
 };
 use http::StatusCode;
+use octocrab::models::InstallationId;
 use tracing::{error, warn};
 use validator::Validate;
 
@@ -24,6 +25,10 @@ pub fn router() -> Router<AppState> {
         .route("/db/migrations", delete(rerun_only_migrations))
         .route("/db", delete(recreate_db))
         .route("/user", get(get_users).delete(delete_users))
+        .route(
+            "/user/:user_id/installation_token",
+            get(get_installation_token),
+        )
         .route("/teacher", patch(set_users_teacher))
         .route("/error", get(trigger_error))
         .route(
@@ -124,6 +129,36 @@ async fn get_users(
         })
         .collect();
     Ok(Json(users))
+}
+
+async fn get_installation_token(
+    _user: AdminUser,
+    State(state): State<AppState>,
+    Path(user_id): Path<i32>,
+) -> Result<String, StatusCode> {
+    use secrecy::ExposeSecret;
+
+    let user = state
+        .service
+        .repo
+        .find_user_by_id(&user_id)
+        .await
+        .map_err(|_| StatusCode::NOT_FOUND)?;
+
+    let installation_id = user
+        .installation_id
+        .ok_or(StatusCode::NOT_FOUND)?
+        .parse::<u64>()
+        .map_err(|_| StatusCode::EXPECTATION_FAILED)?;
+
+    let (_, token) = state
+        .github_clients
+        .app_client
+        .installation_and_token(InstallationId::from(installation_id))
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(token.expose_secret().to_string())
 }
 
 async fn delete_users(

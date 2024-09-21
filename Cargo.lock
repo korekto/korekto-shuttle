@@ -1686,6 +1686,7 @@ dependencies = [
  "regex",
  "reqwest 0.12.4",
  "rust_decimal",
+ "secrecy",
  "sentry",
  "sentry-tower",
  "sentry-tracing",
