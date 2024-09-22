@@ -22,11 +22,13 @@ pub fn router() -> Router<AppState> {
             "/module",
             get(get_modules).post(create_module).delete(delete_modules),
         )
-        .route("/module/:module_id", get(get_module).put(update_module))
         .route(
-            "/module/:module_id/assignment",
-            post(create_assignment).delete(delete_assignments),
+            "/module/:module_id",
+            get(get_module)
+                .put(update_module)
+                .delete(delete_assignments),
         )
+        .route("/module/:module_id/assignment", post(create_assignment))
         .route("/module/:module_id/grade", get(get_grades))
         .route(
             "/module/:module_id/assignment/:assignment_id",
