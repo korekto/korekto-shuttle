@@ -25,6 +25,7 @@ pub fn router() -> Router<AppState> {
         .route("/db/migrations", delete(rerun_only_migrations))
         .route("/db", delete(recreate_db))
         .route("/user", get(get_users).delete(delete_users))
+        .route("/user/resync/github", get(resync_github))
         .route(
             "/user/:user_id/installation_token",
             get(get_installation_token),
@@ -262,6 +263,21 @@ async fn trigger_error(
         .await
         .map_err(|err| {
             error!(error = ?err, %user, "[http] trigger_error");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+    Ok(())
+}
+
+async fn resync_github(
+    AdminUser(user): AdminUser,
+    State(state): State<AppState>,
+) -> Result<(), StatusCode> {
+    state
+        .service
+        .resync_github(&state.github_clients)
+        .await
+        .map_err(|err| {
+            error!(error = ?err, %user, "[http] resync_github");
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
     Ok(())

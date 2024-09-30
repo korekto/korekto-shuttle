@@ -114,4 +114,39 @@ impl ClientCache {
             None
         }
     }
+
+    pub async fn list_accessible_installations(&self) -> anyhow::Result<Vec<InstallationInfo>> {
+        let mut installations = vec![];
+        // It's unclear in documentation, but default page for /installation/repositories is 1
+        // as stated here https://docs.github.com/en/rest/apps/installations?apiVersion=2022-11-28
+        let mut page_index: u32 = 0;
+        loop {
+            let page = self
+                .app_client
+                .apps()
+                .installations()
+                .page(page_index)
+                .send()
+                .await?;
+            let last_page = page.items.is_empty();
+            page.items
+                .into_iter()
+                .map(|i| InstallationInfo {
+                    installation_id: i.id.to_string(),
+                    login: i.account.login,
+                })
+                .for_each(|r| installations.push(r));
+            page_index += 1;
+            if last_page {
+                break;
+            }
+        }
+
+        Ok(installations)
+    }
+}
+
+pub struct InstallationInfo {
+    pub installation_id: String,
+    pub login: String,
 }

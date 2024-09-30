@@ -6,6 +6,7 @@ use crate::repository::Repository;
 
 pub mod dtos;
 mod find_user_by_id;
+mod github;
 mod grading_tasks;
 mod teacher_assignment;
 mod teacher_module;
