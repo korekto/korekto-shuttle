@@ -133,20 +133,20 @@ async fn get_users(
 }
 
 async fn get_installation_token(
-    _user: AdminUser,
+    AdminUser(user): AdminUser,
     State(state): State<AppState>,
     Path(user_id): Path<i32>,
 ) -> Result<String, StatusCode> {
     use secrecy::ExposeSecret;
 
-    let user = state
+    let target_user = state
         .service
         .repo
         .find_user_by_id(&user_id)
         .await
         .map_err(|_| StatusCode::NOT_FOUND)?;
 
-    let installation_id = user
+    let installation_id = target_user
         .installation_id
         .ok_or(StatusCode::NOT_FOUND)?
         .parse::<u64>()
@@ -157,13 +157,16 @@ async fn get_installation_token(
         .app_client
         .installation_and_token(InstallationId::from(installation_id))
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            error!(error = ?err, %user, "[http] get_installation_token");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     Ok(token.expose_secret().to_string())
 }
 
 async fn delete_users(
-    _user: AdminUser,
+    AdminUser(user): AdminUser,
     State(state): State<AppState>,
     Json(user_ids): Json<Vec<i32>>,
 ) -> Result<(), StatusCode> {
@@ -172,12 +175,15 @@ async fn delete_users(
         .repo
         .delete_users_by_id(&user_ids)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            error!(error = ?err, %user, "[http] delete_users");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     Ok(())
 }
 
 async fn set_users_teacher(
-    _user: AdminUser,
+    AdminUser(user): AdminUser,
     State(state): State<AppState>,
     Json(user_ids): Json<Vec<i32>>,
 ) -> Result<(), StatusCode> {
@@ -186,7 +192,10 @@ async fn set_users_teacher(
         .repo
         .set_users_teacher(&user_ids)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|err| {
+            error!(error = ?err, %user, "[http] set_users_teacher");
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
     Ok(())
 }
 
