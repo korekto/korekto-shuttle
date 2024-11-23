@@ -644,6 +644,7 @@ pub struct StudentGradesResponse {
     first_name: String,
     last_name: String,
     school_email: String,
+    provider_login: String,
     grades: Vec<Decimal>,
     total: Decimal,
 }
@@ -654,6 +655,7 @@ impl From<StudentGrades> for StudentGradesResponse {
             first_name: value.first_name,
             last_name: value.last_name,
             school_email: value.school_email,
+            provider_login: value.provider_login,
             grades: value.grades.0.iter().map(|g| to_decimal(g.grade)).collect(),
             total: to_decimal(value.total),
         }
