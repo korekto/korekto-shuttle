@@ -12,8 +12,8 @@ impl Repository {
         teacher: &User,
     ) -> anyhow::Result<Assignment> {
         const QUERY: &str = "INSERT INTO assignment AS a
-            (module_id, name, start, stop, description, type, subject_url, grader_url, repository_name, factor_percentage, grader_run_url, hidden_by_teacher)
-            SELECT m.id, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+            (module_id, name, start, stop, description, type, subject_url, grader_url, repository_name, factor_percentage, grader_run_url, hidden_by_teacher, grader_cli_v2)
+            SELECT m.id, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
             FROM module m, teacher_module tm
             WHERE
               m.uuid::varchar = $1
@@ -36,6 +36,7 @@ impl Repository {
             .bind(assignment.factor_percentage)
             .bind(&assignment.grader_run_url)
             .bind(assignment.hidden_by_teacher)
+            .bind(assignment.grader_cli_v2)
             .fetch_one(&self.pool)
             .await
             .context(format!("[sql] create_assignment(module_uuid={module_uuid:?}, assignment={assignment:?}, teacher={teacher})"))
@@ -60,7 +61,8 @@ impl Repository {
             a.repository_name,
             a.factor_percentage,
             a.grader_run_url,
-            a.hidden_by_teacher
+            a.hidden_by_teacher,
+            a.grader_cli_v2
             FROM assignment a
             JOIN module m ON m.id = a.module_id
             JOIN teacher_module tm ON tm.module_id = m.id
@@ -100,7 +102,8 @@ impl Repository {
               repository_name = $11,
               factor_percentage = $12,
               grader_run_url = $13,
-              hidden_by_teacher = $14
+              hidden_by_teacher = $14,
+              grader_cli_v2 = $15
             FROM module AS m
             JOIN teacher_module tm ON tm.module_id = m.id
             WHERE m.id = a.module_id
@@ -127,6 +130,7 @@ impl Repository {
             .bind(assignment.factor_percentage)
             .bind(&assignment.grader_run_url)
             .bind(assignment.hidden_by_teacher)
+            .bind(assignment.grader_cli_v2)
             .fetch_one(&self.pool)
             .await
             .context(format!("[sql] update_assignment(module_uuid={module_uuid:?}, uuid={uuid:?}, assignment={assignment:?}, teacher={teacher})"))
