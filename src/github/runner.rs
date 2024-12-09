@@ -107,6 +107,7 @@ impl Runner {
                 "student-repo": task.repository_name,
                 "callback-url": callback_url,
                 "task-id": task.uuid,
+                "grader-exec-v2": task.grader_cli_v2.to_string(),
             }))
             .send()
             .await?;

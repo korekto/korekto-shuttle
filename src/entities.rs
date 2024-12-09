@@ -176,6 +176,8 @@ pub struct NewAssignment {
     pub grader_run_url: String,
     #[cfg_attr(feature = "automatic_test_feature", builder(default))]
     pub hidden_by_teacher: bool,
+    #[cfg_attr(feature = "automatic_test_feature", builder(default))]
+    pub grader_cli_v2: bool,
 }
 
 #[derive(sqlx::FromRow, Debug, Clone)]
@@ -193,6 +195,7 @@ pub struct Assignment {
     pub factor_percentage: i32,
     pub grader_run_url: String,
     pub hidden_by_teacher: bool,
+    pub grader_cli_v2: bool,
 }
 
 pub enum NewGradingTask {
@@ -337,6 +340,7 @@ pub struct GitHubGradingTask {
     pub repository_name: String,
     pub installation_id: String,
     pub grader_url: String,
+    pub grader_cli_v2: bool,
 }
 
 #[derive(sqlx::FromRow, Deserialize, Debug, Clone)]

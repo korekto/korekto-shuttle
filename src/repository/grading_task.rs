@@ -251,7 +251,8 @@ impl Repository {
                 gt.updated_at,
                 a.repository_name,
                 u.installation_id,
-                a.grader_url as grader_url
+                a.grader_url as grader_url,
+                a.grader_cli_v2
               FROM grading_task gt, user_assignment ua, assignment a, module m, \"user\" u
               WHERE gt.user_assignment_id = ua.id
               AND ua.assignment_id = a.id
